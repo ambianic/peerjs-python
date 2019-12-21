@@ -1,3 +1,5 @@
+"""Register with PNP server and wait for remote peers to connect."""
+
 import argparse
 import asyncio
 import logging
@@ -7,37 +9,47 @@ from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
 
 
-def channel_log(channel, t, message):
+def _server_register(channel, t, message):
+    """Register this peer with PNP server."""
+    print('Registering this client with peer discovery server')
+
+
+def _room_join(channel, t, message):
+    """Join room with other local network peers to allow auto discovery."""
+    print('Joining room with local network peers')
+
+
+def _channel_log(channel, t, message):
     print("channel(%s) %s %s" % (channel.label, t, message))
 
 
-def channel_send(channel, message):
-    channel_log(channel, ">", message)
+def _channel_send(channel, message):
+    _channel_log(channel, ">", message)
     channel.send(message)
 
 
-async def consume_signaling(pc, signaling):
-    while True:
-        obj = await signaling.receive()
+def @ps.on("message")
+async def handle_signal():
 
-        if isinstance(obj, RTCSessionDescription):
-            await pc.setRemoteDescription(obj)
+            if isinstance(obj, RTCSessionDescription):
+                await pc.setRemoteDescription(obj)
 
-            if obj.type == "offer":
-                # send answer
-                await pc.setLocalDescription(await pc.createAnswer())
-                await signaling.send(pc.localDescription)
-        elif isinstance(obj, RTCIceCandidate):
-            pc.addIceCandidate(obj)
-        elif obj is None:
-            print("Exiting")
-            break
+                if obj.type == "offer":
+                    # send answer
+                    await pc.setLocalDescription(await pc.createAnswer())
+                    await signaling.send(pc.localDescription)
+            elif isinstance(obj, RTCIceCandidate):
+                pc.addIceCandidate(obj)
+            elif obj is None:
+                print("Exiting")
+                break
+
 
 
 time_start = None
 
 
-def current_stamp():
+def _current_stamp():
     global time_start
 
     if time_start is None:
@@ -47,33 +59,33 @@ def current_stamp():
         return int((time.time() - time_start) * 1000000)
 
 
-async def run_answer(pc, signaling):
+async def _run_answer(pc, signaling):
     await signaling.connect()
 
     @pc.on("datachannel")
     def on_datachannel(channel):
-        channel_log(channel, "-", "created by remote party")
+        _channel_log(channel, "-", "created by remote party")
 
         @channel.on("message")
         def on_message(message):
-            channel_log(channel, "<", message)
+            _channel_log(channel, "<", message)
 
             if isinstance(message, str) and message.startswith("ping"):
                 # reply
-                channel_send(channel, "pong" + message[4:])
+                _channel_send(channel, "pong" + message[4:])
 
-    await consume_signaling(pc, signaling)
+    await _consume_signaling(pc, signaling)
 
 
-async def run_offer(pc, signaling):
+async def _run_offer(pc, signaling):
     await signaling.connect()
 
     channel = pc.createDataChannel("chat")
-    channel_log(channel, "-", "created by local party")
+    _channel_log(channel, "-", "created by local party")
 
     async def send_pings():
         while True:
-            channel_send(channel, "ping %d" % current_stamp())
+            _channel_send(channel, "ping %d" % _current_stamp())
             await asyncio.sleep(1)
 
     @channel.on("open")
@@ -82,17 +94,17 @@ async def run_offer(pc, signaling):
 
     @channel.on("message")
     def on_message(message):
-        channel_log(channel, "<", message)
+        _channel_log(channel, "<", message)
 
         if isinstance(message, str) and message.startswith("pong"):
-            elapsed_ms = (current_stamp() - int(message[5:])) / 1000
+            elapsed_ms = (_current_stamp() - int(message[5:])) / 1000
             print(" RTT %.2f ms" % elapsed_ms)
 
     # send offer
     await pc.setLocalDescription(await pc.createOffer())
     await signaling.send(pc.localDescription)
 
-    await consume_signaling(pc, signaling)
+    await _consume_signaling(pc, signaling)
 
 
 if __name__ == "__main__":
@@ -109,9 +121,9 @@ if __name__ == "__main__":
     signaling = create_signaling(args)
     pc = RTCPeerConnection()
     if args.role == "offer":
-        coro = run_offer(pc, signaling)
+        coro = _run_offer(pc, signaling)
     else:
-        coro = run_answer(pc, signaling)
+        coro = _run_answer(pc, signaling)
 
     # run event loop
     loop = asyncio.get_event_loop()
