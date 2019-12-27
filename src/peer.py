@@ -1,33 +1,40 @@
-import { EventEmitter } from "eventemitter3";
-import { util } from "./util";
-import logger, { LogLevel } from "./logger";
-import { Socket } from "./socket";
-import { MediaConnection } from "./mediaconnection";
-import { DataConnection } from "./dataconnection";
-import {
-  ConnectionType,
-  PeerErrorType,
-  PeerEventType,
-  SocketEventType,
-  ServerMessageType
-} from "./enums";
-import { BaseConnection } from "./baseconnection";
-import { ServerMessage } from "./servermessage";
-import { API } from "./api";
-import { PeerConnectOption, PeerJSOption } from "..";
+"""Python port of PeerJS client with built in signaling to PeerJS server."""
+from pyee import AsyncIOEventEmitter
+import logging
+from .enums import \
+    ConnectionType, \
+    PeerErrorType, \
+    PeerEventType, \
+    SocketEventType, \
+    ServerMessageType
+import json
+import websockets
+from websockets import WebSocket, ConnectionClosed
+import asyncio
+from .lib.socket import Socket
+from .lib.dataconnection import DataConnection
+from .lib.baseconnection import BaseConnection
+from .lib.servermessage import ServerMessage
+from .lib.rest_api import API
 
-class PeerOptions implements PeerJSOption {
-  debug?: LogLevel; // 1: Errors, 2: Warnings, 3: All logs
-  host?: string;
-  port?: number;
-  path?: string;
-  key?: string;
-  token?: string;
-  config?: any;
-  secure?: boolean;
-  pingInterval?: number;
-  logFunction?: (logLevel: LogLevel, ...rest: any[]) => void;
-}
+class PeerConnectOption:
+    def __init__(self):
+        self.label: str = None
+        self.metadata = None
+        self.serialization: str = None
+        self.reliable: bool = None
+
+class PeerOptions:
+    def __init__(self):
+        self.debug: int = 1  # 1: Errors, 2: Warnings, 3: All logs
+        self.host: str = None
+        self.port: int = None
+        self.path: str = None
+        self.key: str = None
+        self.token: str = None
+        self.config = None
+        self.secure: bool = None
+        self.pingInterval: int = None
 
 
 def _object_from_string(message_str):
@@ -57,25 +64,8 @@ def _object_to_string(obj):
 
 
 
-/**
- * A peer who can initiate connections with other peers.
- */
-export class Peer extends EventEmitter {
-  private static readonly DEFAULT_KEY = "peerjs";
-
-  private readonly _options: PeerOptions;
-  private readonly _api: API;
-  private readonly _socket: Socket;
-
-  private _id: string | null = null;
-  private _lastServerId: string | null = null;
-
-  // States.
-  private _destroyed = false; // Connections have been killed
-  private _disconnected = false; // Connection to PeerServer killed but P2P connections still active
-  private _open = false; // Sockets and such are not yet open.
-  private readonly _connections: Map<string, BaseConnection[]> = new Map(); // All connections for this peer.
-  private readonly _lostMessages: Map<string, ServerMessage[]> = new Map(); // src => [list of messages]
+class Peer(AsyncIOEventEmitter):
+    """A peer that can initiate connections with other peers."""
 
   get id() {
     return this._id;
@@ -114,21 +104,34 @@ export class Peer extends EventEmitter {
     return this._disconnected;
   }
 
-  constructor(id?: string | PeerOptions, options?: PeerOptions) {
-    super();
+  def __init__(self, id: str = None, options: PeerOptions = None) {
+    self.super();
 
-    let userId: string | undefined;
+    self._DEFAULT_KEY = "peerjs";
 
-    // Deal with overloading
-    if (id && id.constructor == Object) {
-      options = id as PeerOptions;
-    } else if (id) {
-      userId = id.toString();
-    }
+    self._options: PeerOptions;
+    self._api: API;
+    self._socket: Socket;
 
-    // Configurize options
+    self._id: str = id;
+    self._lastServerId: str = None
+
+    # States.
+    self._destroyed = false; // Connections have been killed
+    self._disconnected = false; // Connection to PeerServer killed but P2P connections still active
+    self._open = false; // Sockets and such are not yet open.
+    self._connections: dict = {}  # All connections for this peer.
+    self._lostMessages: dict = {}  # src => [list of server messages]
+
+    userId: str = None
+
+    # Deal with overloading
+    if id:
+      userId = id
+
+    # Configure options
     options = {
-      debug: 0, // 1: Errors, 2: Warnings, 3: All logs
+      debug: 0,  # 1: Errors, 2: Warnings, 3: All logs
       host: util.CLOUD_HOST,
       port: util.CLOUD_PORT,
       path: "/",
