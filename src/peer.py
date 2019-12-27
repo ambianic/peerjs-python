@@ -1,4 +1,5 @@
 """Python port of PeerJS client with built in signaling to PeerJS server."""
+from typing import List
 from pyee import AsyncIOEventEmitter
 import logging
 from .enums import \
@@ -19,12 +20,14 @@ from .lib.rest_api import API
 
 log = logging.getLogger(__name__)
 
+
 class PeerConnectOption:
     def __init__(self, **kwargs):
         self.label: str = None
         self.metadata = None
         self.serialization: str = None
         self.reliable: bool = None
+
 
 class PeerOptions:
     def __init__(self, **kwargs):
@@ -39,6 +42,7 @@ class PeerOptions:
         for k, v in kwargs:
             setattr(self, k, v)
 
+
 # 0: None, 1: Errors, 2: Warnings, 3: All logs
 DEBUG_LEVELS = {
     0: logging.CRITICAL,
@@ -46,6 +50,7 @@ DEBUG_LEVELS = {
     2: logging.WARNING,
     3:  logging.DEBUG
 }
+
 
 def _object_from_string(message_str):
     message = json.loads(message_str)
@@ -74,7 +79,7 @@ def _object_to_string(obj):
 
 
 class Peer(AsyncIOEventEmitter):
-    """A peer that can initiate direct connections with multiple other peers."""
+    """A peer that can initiate direct connections with other peers."""
 
     def __init__(self, id: str = None, **options):
         super()
@@ -91,7 +96,8 @@ class Peer(AsyncIOEventEmitter):
         # States.
         # When True, all peer and server connections have been killed.
         self._destroyed = False
-        # When True, connection to PeerServer killed but P2P connections still active.
+        # When True, connection to PeerServer killed
+        # but P2P connections still active.
         self._disconnected = False
         # When True, websocket to signaling server is open.
         self._open = False
@@ -106,17 +112,17 @@ class Peer(AsyncIOEventEmitter):
 
         # Deal with overloading
         if id:
-          userId = id
+            userId = id
 
         # Configure options
         this._options = PeerOptions(**options)
 
         # Set path correctly.
         if self._options.path:
-          if self._options.path[0] != "/":
-            self._options.path = "/" + this._options.path
-          if self._options.path[this._options.path.length - 1] != "/":
-            self._options.path += "/"
+            if self._options.path[0] != "/":
+                self._options.path = "/" + this._options.path
+            if self._options.path[this._options.path.length - 1] != "/":
+                self._options.path += "/"
 
     self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
 
@@ -131,8 +137,9 @@ class Peer(AsyncIOEventEmitter):
     # Sanity checks
     # Ensure alphanumeric id
     if userId and not util.validateId(userId):
-      self._delayedAbort(PeerErrorType.InvalidID, f'ID "${userId}" is invalid')
-      return
+        self._delayedAbort(PeerErrorType.InvalidID,
+                           f'ID "${userId}" is invalid')
+        return
 
     if userId:
         self._initialize(userId)
@@ -144,82 +151,82 @@ class Peer(AsyncIOEventEmitter):
             self._abort(PeerErrorType.ServerError, e)
 
     @property
-    def id() -> None:
+    def id(self, ) -> None:
         return self._id
 
     @property
-    def options():
+    def options(self, ):
         return self._options
 
     @property
-    def open():
+    def open(self, ):
         return self._open
 
     @property
-    def socket():
+    def socket(self, ):
         return self._socket
 
-  # #
-  #  * @deprecated
-  #  * Return type will change from Object to Map<string,[]>
-  #  */
-  # get connections(): Object {
-  #   const plainConnections = Object.create(null);
-  #
-  #   for (let [k, v] of this._connections) {
-  #     plainConnections[k] = v;
-  #   }
-  #
-  #   return plainConnections;
-  # }
+    # #
+    #  * @deprecated
+    #  * Return type will change from Object to Map<string,[]>
+    #  */
+    # get connections(): Object {
+    #   const plainConnections = Object.create(null);
+    #
+    #   for (let [k, v] of this._connections) {
+    #     plainConnections[k] = v;
+    #   }
+    #
+    #   return plainConnections;
+    # }
 
     @property
-    def destroyed():
+    def destroyed(self, ):
         return self._destroyed
 
     @property
-    def disconnected():
+    def disconnected(self, ):
         return self._disconnected
 
     @property
-    def _createServerConnection() -> Socket:
+    def _createServerConnection(self, ) -> Socket:
         socket = Socket(
-        self._options.secure,
-        self._options.host,
-        self._options.port,
-        self._options.path,
-        self._options.key,
-        self._options.pingInterval)
+            self._options.secure,
+            self._options.host,
+            self._options.port,
+            self._options.path,
+            self._options.key,
+            self._options.pingInterval)
 
         @socket.on(SocketEventType.Message)
         def on_message(data: ServerMessage):
-          self._handleMessage(data)
+            self._handleMessage(data)
 
         @socket.on(SocketEventType.Error)
         def on_error(error: str):
-          self._abort(PeerErrorType.SocketError, error)
+            self._abort(PeerErrorType.SocketError, error)
 
         @socket.on(SocketEventType.Disconnected)
         def on_disconnected():
             if self.disconnected:
                 return
-
-            self.emitError(PeerErrorType.Network, "Lost connection to server.");
+            self.emitError(PeerErrorType.Network, "Lost connection to server.")
             self.disconnect()
 
         @socket.on(SocketEventType.Close)
-        on_close():
+        def on_close():
             if not this.disconnected:
-                self._abort(PeerErrorType.SocketClosed, "Underlying socket is already closed.")
+                self._abort(PeerErrorType.SocketClosed,
+                            "Underlying socket is already closed.")
 
         return socket
 
-    def _initialize(id: str) -> None:
+    def _initialize(self, id: str) -> None:
         """ Initialize a connection with the server."""
         self._id = id
         self.socket.start(id, self._options.token)
 
-    def _handleMessage(message: ServerMessage) -> None:
+    def _handleMessage(self, message: ServerMessage) -> None:
         """Handles messages from the server."""
         type = message.type
         payload = message.payload
@@ -229,69 +236,74 @@ class Peer(AsyncIOEventEmitter):
 
         # The connection to the server is open.
         @server_messenger.on(ServerMessageType.Open)
-        def _on_server_open(peerId = None, payload = None):
+        def _on_server_open(peerId=None, payload=None):
             self._lastServerId = self.id
             self._open = True
             self.emit(PeerEventType.Open, this.id)
 
         # Server error.
         @server_messenger.on(ServerMessageType.Error)
-        def _on_server_error(peerId = None, payload = None):
+        def _on_server_error(peerId=None, payload=None):
             self._abort(PeerErrorType.ServerError, payload.msg)
 
         # The selected ID is taken.
         @server_messenger.on(ServerMessageType.IdTaken)
-        def _on_server_idtaken(peerId = None, payload = None):
-            self._abort(PeerErrorType.UnavailableID, f`ID "${this.id}" is taken`)
+        def _on_server_idtaken(peerId=None, payload=None):
+            self._abort(PeerErrorType.UnavailableID,
+                        f'ID "${this.id}" is taken')
 
         # The given API key cannot be found.
         @server_messenger.on(ServerMessageType.InvalidKey)
-        def _on_server_invalidkey(peerId = None, payload = None):
-            self._abort(PeerErrorType.InvalidKey, f'API KEY "${this._options.key}" is invalid')
+        def _on_server_invalidkey(peerId=None, payload=None):
+            self._abort(PeerErrorType.InvalidKey,
+                        f'API KEY "${this._options.key}" is invalid')
 
         # Another peer has closed its connection to this peer.
         @server_messenger.on(ServerMessageType.Leave)
-        def _on_server_leave(peerId = None, payload = None):
+        def _on_server_leave(peerId=None, payload=None):
             log.debug(f'Received leave message from ${peerId}')
             self._cleanupPeer(peerId)
             self._connections.delete(peerId)
 
         # The offer sent to a peer has expired without response.
         @server_messenger.on(ServerMessageType.Expire)
-        def _on_server_expire(peerId = None, payload = None):
-            self.emitError(PeerErrorType.PeerUnavailable, f'Could not connect to peer ${peerId}')
+        def _on_server_expire(peerId=None, payload=None):
+            self.emitError(PeerErrorType.PeerUnavailable,
+                           f'Could not connect to peer ${peerId}')
 
         # Server relaying offer for a direct connection from a remote peer
         @server_messenger.on(ServerMessageType.Offer)
-        def _on_server_offer(peerId = None, payload = None):
+        def _on_server_offer(peerId=None, payload=None):
             self._handle_offer(peerId, payload)
 
         # Something went wrong during emit message handling
         @server_messenger.on('error')
-        def on_error(message):
-            log.warning(message)
+        def on_error(error_message):
+            log.warning('Error on server message emit: {}', message)
 
-
-        is_handled = server_messenger.emit(type, peerId = peerId, payload = payload)
+        is_handled = server_messenger.emit(type,
+                                           peerId=peerId,
+                                           payload=payload)
         if not is_handled:
-            if not payload:
-              log.warn(f'You received a malformed message from ${peerId} of type ${type}')
-              return
+            _handle_other(peerId=peerId, payload=payload)
 
-            connectionId = payload.connectionId
-            connection = self.getConnection(peerId, connectionId)
+    def _handle_other(self, peerId=None, payload=None):
+        if not payload:
+            log.warn(f'You received a malformed message '
+                     f'from ${peerId} of type ${type}')
+            return
+        connectionId = payload.connectionId
+        connection = self.getConnection(peerId, connectionId)
+        if connection and connection.peerConnection:
+            # Pass it on.
+            connection.handleMessage(message)
+        elif connectionId:
+            # Store for possible later use
+            self._storeMessage(connectionId, message)
+        else:
+            log.warn("You received an unrecognized message:", message)
 
-            if connection and connection.peerConnection:
-              # Pass it on.
-              connection.handleMessage(message)
-            elif:
-              # Store for possible later use
-              self._storeMessage(connectionId, message);
-            else:
-              log.warn("You received an unrecognized message:", message)
-
-
-    def _handle_offer(peerId, payload):
+    def _handle_offer(self, peerId=None, payload=None):
         """Handles remote peer offer for a direct connection."""
         # we should consider switching this to CALL/CONNECT,
         # but this is the least breaking option.
@@ -300,13 +312,14 @@ class Peer(AsyncIOEventEmitter):
 
         if (connection):
             connection.close()
-            logger.warn(f'Offer received for existing Connection ID:${connectionId}')
+            logger.warn(f'Offer received for '
+                        f'existing Connection ID:${connectionId}')
 
         # Create a new connection.
         if payload.type == ConnectionType.Media:
+            pass
         # MediaConnection not supported in the Python port of PeerJS yet.
         #       Contributions welcome!
-            pass
         #   connection = new MediaConnection(peerId, this, {
         #     connectionId: connectionId,
         #     _payload: payload,
@@ -315,278 +328,237 @@ class Peer(AsyncIOEventEmitter):
         #   this._addConnection(peerId, connection);
         #   this.emit(PeerEventType.Call, connection);
         elif payload.type == ConnectionType.Data:
-            connection = DataConnection(peerId, self,
-                connectionId = connectionId,
-                _payload = payload,
-                metadata = payload.metadata,
-                label = payload.label,
-                serialization = payload.serialization,
-                reliable = payload.reliable)
+            connection = DataConnection(
+                peerId,
+                self,
+                connectionId=connectionId,
+                _payload=payload,
+                metadata=payload.metadata,
+                label=payload.label,
+                serialization=payload.serialization,
+                reliable=payload.reliable)
             self._addConnection(peerId, connection)
             self.emit(PeerEventType.Connection, connection)
         else:
-          logger.warn(f'Received malformed connection type:${payload.type}')
-          return
+            logger.warn(f'Received malformed connection type:${payload.type}')
+            return
 
-        # Find messages.
-        const messages = self._getMessages(connectionId)
+        # Retrieved pending messages from the server for remote peers.
+        messages = self._getMessages(connectionId)
         for message in messages:
-          connection.handleMessage(message)
+            connection.handleMessage(message)
 
-
-    def _storeMessage(connectionId: string, message: ServerMessage) -> None:
+    def _storeMessage(self,
+                      connectionId: string, message: ServerMessage) -> None:
         """Stores messages without a set up connection, to be claimed later."""
-        if (!this._lostMessages.has(connectionId)) {
-          this._lostMessages.set(connectionId, []);
-        }
+        if not this._lostMessages.has(connectionId):
+            self._lostMessages.set(connectionId, [])
 
-        this._lostMessages.get(connectionId).push(message);
-        }
+        message_list = self._lostMessages.get(connectionId)
+        message_list.append(message)
 
-        /** Retrieve messages from lost message store */
-        //TODO Change it to private
-        public _getMessages(connectionId: string): ServerMessage[] {
-        const messages = this._lostMessages.get(connectionId);
+    def _getMessages(self, connectionId: string) -> List[ServerMessage]:
+        """Retrieve messages from lost message store."""
+        messages = self._lostMessages.pop(connectionId, [])
+        return messages
 
-        if (messages) {
-          this._lostMessages.delete(connectionId);
-          return messages;
-        }
+    def connect(self,
+                peer: string,
+                options: PeerConnectOption = {}) -> DataConnection:
+        """Return a DataConnection to the specified peer.
 
-        return [];
-        }
+        See documentation for a complete list of options.
+        """
+        if self.disconnected:
+            log.warning(
+                "You cannot connect to a new Peer because you called "
+                ".disconnect() on this Peer and "
+                "ended your connection with the "
+                "server. You can create a new Peer to reconnect, "
+                " or call reconnect "
+                "on this peer if you believe its ID to still be available."
+            )
+            self.emitError(
+                PeerErrorType.Disconnected,
+                "Cannot connect to new Peer after disconnecting from server."
+            )
+            return
 
-    /**
-    * Returns a DataConnection to the specified peer. See documentation for a
-    * complete list of options.
-    */
-    connect(peer: string, options: PeerConnectOption = {}): DataConnection {
-    if (this.disconnected) {
-      logger.warn(
-        "You cannot connect to a new Peer because you called " +
-        ".disconnect() on this Peer and ended your connection with the " +
-        "server. You can create a new Peer to reconnect, or call reconnect " +
-        "on this peer if you believe its ID to still be available."
-      );
-      this.emitError(
-        PeerErrorType.Disconnected,
-        "Cannot connect to new Peer after disconnecting from server."
-      );
-      return;
-    }
+        dataConnection = DataConnection(peer, this, options)
+        self._addConnection(peer, dataConnection)
+        return dataConnection
 
-    const dataConnection = new DataConnection(peer, this, options);
-    this._addConnection(peer, dataConnection);
-    return dataConnection;
-    }
+    # MediaConnection not implemented in Python port yet.
+    #           Contributions welcome!
+    # /**
+    # * Returns a MediaConnection to the specified peer.
+    # See documentation for a
+    # * complete list of options.
+    # */
+    # call(peer: string, stream: MediaStream, options: any = {}):
+    #    MediaConnection {
+    # if (this.disconnected) {
+    #   logger.warn(
+    #     "You cannot connect to a new Peer because you called " +
+    #     ".disconnect() on this Peer and ended your connection with the " +
+    #     "server. You can create a new Peer to reconnect."
+    #   );
+    #   this.emitError(
+    #     PeerErrorType.Disconnected,
+    #     "Cannot connect to new Peer after disconnecting from server."
+    #   );
+    #   return;
+    # }
+    #
+    # if (!stream) {
+    #   logger.error(
+    #     "To call a peer, you must provide a stream from your browser's
+    #       `getUserMedia`."
+    #   );
+    #   return;
+    # }
+    #
+    # options._stream = stream;
+    #
+    # const mediaConnection = new MediaConnection(peer, this, options);
+    # this._addConnection(peer, mediaConnection);
+    # return mediaConnection;
+    # }
 
-    /**
-    * Returns a MediaConnection to the specified peer. See documentation for a
-    * complete list of options.
-    */
-    call(peer: string, stream: MediaStream, options: any = {}): MediaConnection {
-    if (this.disconnected) {
-      logger.warn(
-        "You cannot connect to a new Peer because you called " +
-        ".disconnect() on this Peer and ended your connection with the " +
-        "server. You can create a new Peer to reconnect."
-      );
-      this.emitError(
-        PeerErrorType.Disconnected,
-        "Cannot connect to new Peer after disconnecting from server."
-      );
-      return;
-    }
+    def _addConnection(self,
+                       peerId: string, connection: BaseConnection) -> None:
+        """Add a data/media connection to this peer."""
+        log.debug(f"add connection ${connection.type}:"
+                  f"${connection.connectionId} to peerId:${peerId}")
+        if not this._connections.has(peerId):
+            self._connections.set(peerId, [])
+        self._connections.get(peerId).push(connection)
 
-    if (!stream) {
-      logger.error(
-        "To call a peer, you must provide a stream from your browser's `getUserMedia`."
-      );
-      return;
-    }
+    def _removeConnection(self, connection: BaseConnection) -> None:
+        connections = this._connections.get(connection.peer, None)
+        if connections:
+            connections.pop(connection, None)
+        # remove from lost messages
+        this._lostMessages.pop(connection.connectionId, None)
 
-    options._stream = stream;
+    def getConnection(self,
+                      peerId: string,
+                      connectionId: string) -> BaseConnection:
+        """Retrieve a data/media connection for this peer."""
+        connections = this._connections.get(peerId, None)
+        if not connections:
+            return None
+        for connection in connections:
+            if connection.connectionId == connectionId:
+                return connection
+        return None
 
-    const mediaConnection = new MediaConnection(peer, this, options);
-    this._addConnection(peer, mediaConnection);
-    return mediaConnection;
-    }
+    async def _delayedAbort(self, type: PeerErrorType, message: str) -> None:
+        asyncio.asyncio.create_task(self._abort(type, message))
 
-    /** Add a data/media connection to this peer. */
-    private _addConnection(peerId: string, connection: BaseConnection): void {
-    logger.log(`add connection ${connection.type}:${connection.connectionId} to peerId:${peerId}`);
+    async def _abort(self, type: PeerErrorType, message: str) -> None:
+        """Emits an error message and destroys the Peer.
 
-    if (!this._connections.has(peerId)) {
-      this._connections.set(peerId, []);
-    }
-    this._connections.get(peerId).push(connection);
-    }
+        The Peer is not destroyed if it's in a disconnected state,
+        in which case
+        it retains its disconnected state and its existing connections.
+        """
+        log.error("Aborting!")
+        self.emitError(type, message)
+        if not self._lastServerId:
+            self.destroy()
+        else:
+            self.disconnect()
 
-    //TODO should be private
-    _removeConnection(connection: BaseConnection): void {
-    const connections = this._connections.get(connection.peer);
+    def emitError(type: PeerErrorType, err: str) -> None:
+        """Emit a typed error message."""
+        log.error("Error:", err)
+        if isinstance(err, str):
+            error = Error(err)
+        else:
+            assert isinstance(error, Error)
+        error.type = type
+        self.emit(PeerEventType.Error, error)
 
-    if (connections) {
-      const index = connections.indexOf(connection);
+    def destroy() -> None:
+        """Destroy the Peer: close all active connections.
 
-      if (index !== -1) {
-        connections.splice(index, 1);
-      }
-    }
+         Close all active peer connections and the active server connection.
+         Warning: The peer can no longer create or
+         accept connections after being
+         destroyed.
+         """
+        if self.destroyed:
+            return
+        log.debug(f'Destroy peer with ID:${this.id}')
+        self.disconnect()
+        self._cleanup()
+        self._destroyed = True
+        self.emit(PeerEventType.Close)
 
-    //remove from lost messages
-    this._lostMessages.delete(connection.connectionId);
-    }
+    def _cleanup() -> None:
+        """Disconnects every connection on this peer."""
+        for peerId in self._connections.keys():
+            self._cleanupPeer(peerId)
+            self._connections.delete(peerId)
+            self.socket.removeAllListeners()
 
-    /** Retrieve a data/media connection for this peer. */
-    getConnection(peerId: string, connectionId: string): null | BaseConnection {
-    const connections = this._connections.get(peerId);
-    if (!connections) {
-      return null;
-    }
+    def _cleanupPeer(peerId: string) -> None:
+        """Closes all connections to this peer."""
+        connections = this._connections.get(peerId)
+        if not connections:
+            return
+        for connection in connections:
+            connection.close()
 
-    for (let connection of connections) {
-      if (connection.connectionId === connectionId) {
-        return connection;
-      }
-    }
+    def disconnect() -> None:
+        """Disconnects the Peer's connection to the PeerServer.
 
-    return null;
-    }
+        Does not close any active connections.
+        Warning: The peer can no longer create or
+        accept connections after being
+        disconnected. It also cannot reconnect to the server.
+        """
+        if self.disconnected:
+            return
+        currentId = this.id
+        log.debug(f'Disconnect peer with ID:${currentId}')
+        self._disconnected = True
+        self._open = False
+        self.socket.close()
+        self._lastServerId = currentId
+        self._id = None
+        self.emit(PeerEventType.Disconnected, currentId)
 
-    private _delayedAbort(type: PeerErrorType, message: string | Error): void {
-    setTimeout(() => {
-      this._abort(type, message);
-    }, 0);
-    }
+    def reconnect() -> None:
+        """Attempts to reconnect with the same ID."""
+        if self.disconnected and not self.destroyed:
+            log.debug(f"Attempting reconnection "
+                      "to server with ID ${this._lastServerId}")
+            self._disconnected = False
+            self._initialize(this._lastServerId)
+        elif this.destroyed:
+            raise RuntimeError("This peer cannot reconnect to the server. "
+                               "It has already been destroyed.")
+        elif not self.disconnected and not self.open:
+            # Do nothing. We're still connecting for the first time.
+            log.info("In a hurry? "
+                     "We're still trying to make the initial connection!")
+        else:
+            raise RuntimeError(
+                f"Peer ${this.id} cannot reconnect "
+                "because it is not disconnected from the server!")
 
-    /**
-    * Emits an error message and destroys the Peer.
-    * The Peer is not destroyed if it's in a disconnected state, in which case
-    * it retains its disconnected state and its existing connections.
-    */
-    private _abort(type: PeerErrorType, message: string | Error): void {
-    logger.error("Aborting!");
+    async def listAllPeers() -> []:
+        """Get a list of available peer IDs.
 
-    this.emitError(type, message);
+        WARNING: This is a potential security backdoor!!
 
-    if (!this._lastServerId) {
-      this.destroy();
-    } else {
-      this.disconnect();
-    }
-    }
-
-    /** Emits a typed error message. */
-    emitError(type: PeerErrorType, err: string | Error): void {
-    logger.error("Error:", err);
-
-    let error: Error & { type?: PeerErrorType };
-
-    if (typeof err === "string") {
-      error = new Error(err);
-    } else {
-      error = err as Error;
-    }
-
-    error.type = type;
-
-    this.emit(PeerEventType.Error, error);
-    }
-
-    /**
-    * Destroys the Peer: closes all active connections as well as the connection
-    *  to the server.
-    * Warning: The peer can no longer create or accept connections after being
-    *  destroyed.
-    */
-    destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
-    logger.log(`Destroy peer with ID:${this.id}`);
-
-    this.disconnect();
-    this._cleanup();
-
-    this._destroyed = true;
-
-    this.emit(PeerEventType.Close);
-    }
-
-    /** Disconnects every connection on this peer. */
-    private _cleanup(): void {
-    for (let peerId of this._connections.keys()) {
-      this._cleanupPeer(peerId);
-      this._connections.delete(peerId);
-    }
-
-    this.socket.removeAllListeners();
-    }
-
-    /** Closes all connections to this peer. */
-    private _cleanupPeer(peerId: string): void {
-    const connections = this._connections.get(peerId);
-
-    if (!connections) return;
-
-    for (let connection of connections) {
-      connection.close();
-    }
-    }
-
-    /**
-    * Disconnects the Peer's connection to the PeerServer. Does not close any
-    *  active connections.
-    * Warning: The peer can no longer create or accept connections after being
-    *  disconnected. It also cannot reconnect to the server.
-    */
-    disconnect(): void {
-    if (this.disconnected) {
-      return;
-    }
-
-    const currentId = this.id;
-
-    logger.log(`Disconnect peer with ID:${currentId}`);
-
-    this._disconnected = true;
-    this._open = false;
-
-    this.socket.close();
-
-    this._lastServerId = currentId;
-    this._id = null;
-
-    this.emit(PeerEventType.Disconnected, currentId);
-    }
-
-    /** Attempts to reconnect with the same ID. */
-    reconnect(): void {
-    if (this.disconnected && !this.destroyed) {
-      logger.log(`Attempting reconnection to server with ID ${this._lastServerId}`);
-      this._disconnected = false;
-      this._initialize(this._lastServerId!);
-    } else if (this.destroyed) {
-      throw new Error("This peer cannot reconnect to the server. It has already been destroyed.");
-    } else if (!this.disconnected && !this.open) {
-      // Do nothing. We're still connecting the first time.
-      logger.error("In a hurry? We're still trying to make the initial connection!");
-    } else {
-      throw new Error(`Peer ${this.id} cannot reconnect because it is not disconnected from the server!`);
-    }
-    }
-
-    /**
-    * Get a list of available peer IDs. If you're running your own server, you'll
-    * want to set allow_discovery: true in the PeerServer options. If you're using
-    * the cloud server, email team@peerjs.com to get the functionality enabled for
-    * your key.
-    */
-    listAllPeers(cb = (_: any[]) => { }): void {
-    this._api.listAllPeers()
-      .then(peers => cb(peers))
-      .catch(error => this._abort(PeerErrorType.ServerError, error));
-    }
-    }
+        If you're running your own server, you'll
+        want to set allow_discovery: true in the PeerServer options.
+        If you're using the PeerJS cloud server,
+        email team@peerjs.com to get the functionality enabled for
+        your key.
+        """
+        peers = await self._api.listAllPeers()
+        return peers
