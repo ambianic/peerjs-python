@@ -16,7 +16,7 @@ from .lib.socket import Socket
 from .lib.dataconnection import DataConnection
 from .lib.baseconnection import BaseConnection
 from .lib.servermessage import ServerMessage
-from .lib.rest_api import API
+from .lib.api import API
 
 log = logging.getLogger(__name__)
 
@@ -124,31 +124,33 @@ class Peer(AsyncIOEventEmitter):
             if self._options.path[this._options.path.length - 1] != "/":
                 self._options.path += "/"
 
-    self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
+        self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
 
-    log.setLevel()
+        if 0 <= self._options.debug <= 3:
+            log.setLevel(DEBUG_LEVELS[self._options.debug])
+        else:
+            log.warning('Debug level option specified as {} '
+                        'which is outside the allowed 0-3 range.'
+                        'Setting to lowest log level: 0', self._options.debug)
 
-    if 0 <= self._options.debug <= 3:
-        log.setLevel(DEBUG_LEVELS[self._options.debug])
+        self._api = API(**options)
+        self._socket = self._createServerConnection()
 
-    self._api = API(**options)
-    self._socket = self._createServerConnection()
+        # Sanity checks
+        # Ensure alphanumeric id
+        if userId and not util.validateId(userId):
+            self._delayedAbort(PeerErrorType.InvalidID,
+                               f'ID "${userId}" is invalid')
+            return
 
-    # Sanity checks
-    # Ensure alphanumeric id
-    if userId and not util.validateId(userId):
-        self._delayedAbort(PeerErrorType.InvalidID,
-                           f'ID "${userId}" is invalid')
-        return
-
-    if userId:
-        self._initialize(userId)
-    else:
-        try:
-            id = await self._api.retrieveId()
-            self._initialize(id)
-        except Exception as e:
-            self._abort(PeerErrorType.ServerError, e)
+        if userId:
+            self._initialize(userId)
+        else:
+            try:
+                id = await self._api.retrieveId()
+                self._initialize(id)
+            except Exception as e:
+                self._abort(PeerErrorType.ServerError, e)
 
     @property
     def id(self, ) -> None:
@@ -552,10 +554,14 @@ class Peer(AsyncIOEventEmitter):
     async def listAllPeers() -> []:
         """Get a list of available peer IDs.
 
-        WARNING: This is a potential security backdoor!!
+        WARNING: Unintended access to this method is a potential security
+        risk as it would enable malicious clients to offer connection
+        to all peers connected to the signaling server!
 
         If you're running your own server, you'll
-        want to set allow_discovery: true in the PeerServer options.
+        want to set allow_discovery: true in the PeerServer options and enforce
+        a crypto safe access key.
+
         If you're using the PeerJS cloud server,
         email team@peerjs.com to get the functionality enabled for
         your key.
