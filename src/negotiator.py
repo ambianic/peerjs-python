@@ -26,192 +26,168 @@ class Negotiator:
         if self.connection.type == ConnectionType.Media and options._stream:
             self._addTracksToConnection(options._stream, peerConnection)
 
-    # What do we need to do now?
-    if (options.originator) {
-      if (this.connection.type === ConnectionType.Data) {
-        const dataConnection = <DataConnection>this.connection;
+        # What do we need to do now?
+        if options.originator:
+            # originate connection offer
+            if this.connection.type == ConnectionType.Data:
+                dataConnection = this.connection
+                config: RTCDataChannelInit = { 'ordered': options.reliable }
+                dataChannel = peerConnection.createDataChannel(
+                    dataConnection.label,
+                    config)
+                dataConnection.initialize(dataChannel)
+            self._makeOffer()
+        else:
+            # receive connection offer originated by remote peer
+            self.handleSDP("OFFER", options.sdp);
 
-        const config: RTCDataChannelInit = { ordered: !!options.reliable };
+    def _startPeerConnection() -> RTCPeerConnection:
+        """Start a Peer Connection."""
+        log.debug("Creating RTCPeerConnection.")
+        peerConnection = RTCPeerConnection(this.connection.provider.options.config)
+        self._setupListeners(peerConnection)
+        return peerConnection
 
-        const dataChannel = peerConnection.createDataChannel(
-          dataConnection.label,
-          config
-        );
-        dataConnection.initialize(dataChannel);
-      }
+    def _setupListeners(peerConnection: RTCPeerConnection = None):
+        """Set up various WebRTC listeners."""
+        peerId = this.connection.peer
+        connectionId = this.connection.connectionId
+        connectionType = this.connection.type
+        provider = this.connection.provider
 
-      this._makeOffer();
-    } else {
-      this.handleSDP("OFFER", options.sdp);
-    }
-  }
+        # ICE CANDIDATES.
+        log.debug("Listening for ICE candidates.")
+        # Its not clear how aiortc supports trickle ice.
+        # Track issue: https://github.com/aiortc/aiortc/issues/246
+        # def peerconn_onicecandidate
+        # peerConnection.onicecandidate = (evt) => {
+        #     if (!evt.candidate || !evt.candidate.candidate) return;
+        #
+        #     logger.log(`Received ICE candidates for ${peerId}:`, evt.candidate);
+        #
+        #       provider.socket.send({
+        #         type: ServerMessageType.Candidate,
+        #         payload: {
+        #           candidate: evt.candidate,
+        #           type: connectionType,
+        #           connectionId: connectionId
+        #         },
+        #         dst: peerId
+        #       });
+        #     };
 
-  /** Start a PC. */
-  private _startPeerConnection(): RTCPeerConnection {
-    logger.log("Creating RTCPeerConnection.");
+        @peerConnection.on('iceconnectionstatechange')
+        def peerconn_oniceconnectionstatechange():
+            state_change = BaseEventEmitter()
+            @state_change.once("failed")
+            def on_failed():
+                logger.log(
+                    "iceConnectionState is failed, closing connections to " +
+                    peerId
+                    )
+                self.connection.emit(
+                    ConnectionEventType.Error,
+                    ConnectionError("Negotiation of connection to " + peerId + " failed.")
+                    )
+                self.connection.close()
 
-    const peerConnection = new RTCPeerConnection(this.connection.provider.options.config);
+            @state_change.once("closed")
+            def on_closed():
+                log.debug(
+                    "iceConnectionState is closed, closing connections to " +
+                    peerId
+                    )
+                self.connection.emit(
+                    ConnectionEventType.Error,
+                    ConnectionError("Connection to " + peerId + " closed.")
+                    )
+                self.connection.close()
 
-    this._setupListeners(peerConnection);
+            @state_change.once("disconnected")
+            def on_disconnected():
+                logger.log(
+                    "iceConnectionState is disconnected, closing connections to " +
+                    peerId
+                    )
+                self.connection.emit(
+                    ConnectionEventType.Error,
+                    ConnectionError("Connection to " + peerId + " disconnected.")
+                    )
+                self.connection.close()
 
-    return peerConnection;
-  }
+            @state_change.once("completed")
+            def on_completed():
+                # this function needs to be implemented as in PeerJS
+                # https://github.com/peers/peerjs/blob/5e36ba17be02a9af7c171399f7737d8ccb38fbbe/lib/negotiator.ts#L119
+                # when the "icecandidate"
+                # event handling issue above is resolved
+                # peerConnection.remove_listener("icecandidate", peerconn_onicecandidate)
+                pass
 
-  /** Set up various WebRTC listeners. */
-  private _setupListeners(
-    peerConnection: RTCPeerConnection
-  ) {
-    const peerId = this.connection.peer;
-    const connectionId = this.connection.connectionId;
-    const connectionType = this.connection.type;
-    const provider = this.connection.provider;
+            # forward connection stage change event to local handlers
+            state_change.emit(peerConnection.iceConnectionState)
+            # notify higher level connection listeners
+            self.connection.emit(ConnectionEventType.IceStateChanged,
+                                 peerConnection.iceConnectionState)
 
-    // ICE CANDIDATES.
-    logger.log("Listening for ICE candidates.");
+        # DATACONNECTION.
+        log.debug("Listening for data channel events.")
+        # Fired between offer and answer, so options should already be saved
+        # in the options hash.
+        @pc.on("datachannel")
+        def peerconn_ondatachanel(evt):
+            log.debug("Received data channel.")
+            dataChannel = evt.channel
+            connection = provider.getConnection(peerId, connectionId)
+            connection.initialize(dataChannel)
 
-    peerConnection.onicecandidate = (evt) => {
-      if (!evt.candidate || !evt.candidate.candidate) return;
+        # MEDIACONNECTION.
+        log.debug("Listening for remote stream.")
+        @pc.on("track")
+        def peerconn_ontrack(evt):
+            log.debug("Received remote stream.")
+            stream = evt.streams[0]
+            connection = provider.getConnection(peerId, connectionId)
+            if connection.type == ConnectionType.Media:
+                mediaConnection = connection
+                self._addStreamToMediaConnection(stream, mediaConnection)
 
-      logger.log(`Received ICE candidates for ${peerId}:`, evt.candidate);
+    def cleanup() -> None:
+        log.debug("Cleaning up PeerConnection to " + this.connection.peer)
+        peerConnection = this.connection.peerConnection
+        if not peerConnection:
+            return
+        self.connection.peerConnection = None
+        # unsubscribe from all PeerConnection's events
+        peerConnection.remove_all_listeners()
+        peerConnectionNotClosed = peerConnection.signalingState != "closed"
+        dataChannelNotClosed = False
+        if self.connection.type == ConnectionType.Data:
+            dataConnection = self.connection
+            dataChannel = dataConnection.dataChannel
+            if dataChannel:
+                dataChannelNotClosed = dataChannel.readyState and \
+                    dataChannel.readyState != "closed"
+        if peerConnectionNotClosed or dataChannelNotClosed:
+            peerConnection.close()
 
-      provider.socket.send({
-        type: ServerMessageType.Candidate,
-        payload: {
-          candidate: evt.candidate,
-          type: connectionType,
-          connectionId: connectionId
-        },
-        dst: peerId
-      });
-    };
+    async def _makeOffer():
+        peerConnection = this.connection.peerConnection
+        provider = this.connection.provider
+        try:
+            offer = await peerConnection.createOffer(
+                this.connection.options.constraints)
+            log.debug("Created offer.")
 
-    peerConnection.oniceconnectionstatechange = () => {
-      switch (peerConnection.iceConnectionState) {
-        case "failed":
-          logger.log(
-            "iceConnectionState is failed, closing connections to " +
-            peerId
-          );
-          this.connection.emit(
-            ConnectionEventType.Error,
-            new Error("Negotiation of connection to " + peerId + " failed.")
-          );
-          this.connection.close();
-          break;
-        case "closed":
-          logger.log(
-            "iceConnectionState is closed, closing connections to " +
-            peerId
-          );
-          this.connection.emit(
-            ConnectionEventType.Error,
-            new Error("Connection to " + peerId + " closed.")
-          );
-          this.connection.close();
-          break;
-        case "disconnected":
-          logger.log(
-            "iceConnectionState is disconnected, closing connections to " +
-            peerId
-          );
-          this.connection.emit(
-            ConnectionEventType.Error,
-            new Error("Connection to " + peerId + " disconnected.")
-          );
-          this.connection.close();
-          break;
-        case "completed":
-          peerConnection.onicecandidate = util.noop;
-          break;
-      }
+            if self.connection.options.sdpTransform and \
+                 callable(self.connection.options.sdpTransform):
+                offer.sdp = self.connection.options.sdpTransform(offer.sdp) or offer.sdp
 
-      this.connection.emit(ConnectionEventType.IceStateChanged, peerConnection.iceConnectionState);
-    };
+            try:
+                await peerConnection.setLocalDescription(offer)
+                log.debug(f"Set localDescription:{offer} for: {self.connection.peer}")
 
-    // DATACONNECTION.
-    logger.log("Listening for data channel");
-    // Fired between offer and answer, so options should already be saved
-    // in the options hash.
-    peerConnection.ondatachannel = (evt) => {
-      logger.log("Received data channel");
-
-      const dataChannel = evt.channel;
-      const connection = <DataConnection>(
-        provider.getConnection(peerId, connectionId)
-      );
-
-      connection.initialize(dataChannel);
-    };
-
-    // MEDIACONNECTION.
-    logger.log("Listening for remote stream");
-
-    peerConnection.ontrack = (evt) => {
-      logger.log("Received remote stream");
-
-      const stream = evt.streams[0];
-      const connection = provider.getConnection(peerId, connectionId);
-
-      if (connection.type === ConnectionType.Media) {
-        const mediaConnection = <MediaConnection>connection;
-
-        this._addStreamToMediaConnection(stream, mediaConnection);
-      }
-    };
-  }
-
-  cleanup(): void {
-    logger.log("Cleaning up PeerConnection to " + this.connection.peer);
-
-    const peerConnection = this.connection.peerConnection;
-
-    if (!peerConnection) {
-      return;
-    }
-
-    this.connection.peerConnection = null;
-
-    //unsubscribe from all PeerConnection's events
-    peerConnection.onicecandidate = peerConnection.oniceconnectionstatechange = peerConnection.ondatachannel = peerConnection.ontrack = () => { };
-
-    const peerConnectionNotClosed = peerConnection.signalingState !== "closed";
-    let dataChannelNotClosed = false;
-
-    if (this.connection.type === ConnectionType.Data) {
-      const dataConnection = <DataConnection>this.connection;
-      const dataChannel = dataConnection.dataChannel;
-
-      if (dataChannel) {
-        dataChannelNotClosed = !!dataChannel.readyState && dataChannel.readyState !== "closed";
-      }
-    }
-
-    if (peerConnectionNotClosed || dataChannelNotClosed) {
-      peerConnection.close();
-    }
-  }
-
-  private async _makeOffer(): Promise<void> {
-    const peerConnection = this.connection.peerConnection;
-    const provider = this.connection.provider;
-
-    try {
-      const offer = await peerConnection.createOffer(
-        this.connection.options.constraints
-      );
-
-      logger.log("Created offer.");
-
-      if (this.connection.options.sdpTransform && typeof this.connection.options.sdpTransform === 'function') {
-        offer.sdp = this.connection.options.sdpTransform(offer.sdp) || offer.sdp;
-      }
-
-      try {
-        await peerConnection.setLocalDescription(offer);
-
-        logger.log("Set localDescription:", offer, `for:${this.connection.peer}`);
-
-        let payload: any = {
+                payload: {
           sdp: offer,
           type: this.connection.type,
           connectionId: this.connection.connectionId,

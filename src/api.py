@@ -1,10 +1,16 @@
-import { util } from "./util";
-import logger from "./logger";
+"""Client side abstraction for commonly used REST APIs."""
 
-export class API {
-  constructor(private readonly _options: any) { }
+from util import util
+import logging
 
-  private _buildUrl(method: string): string {
+log = logging.getLogger(__name__)
+
+class API:
+
+  def __init__(_options):
+      """Create API instance."""
+
+  def _buildUrl(method: str = None) -> str:
     const protocol = this._options.secure ? "https://" : "http://";
     let url =
       protocol +

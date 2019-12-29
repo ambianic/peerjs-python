@@ -5,6 +5,8 @@ import math
 import asyncio
 import aiofiles
 
+log = logging.getLogger(__name__)
+
 DEFAULT_CONFIG = {
   'iceServers': [
     {'urls': "stun:stun.l.google.com:19302"},
