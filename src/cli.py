@@ -27,7 +27,6 @@ def _channel_send(channel, message):
     _channel_log(channel, ">", message)
     channel.send(message)
 
-
 def @ps.on("message")
 async def handle_signal():
 

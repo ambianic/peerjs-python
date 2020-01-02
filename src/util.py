@@ -37,8 +37,8 @@ class Util:
         self.chunkedMTU = 16300
         # browser-agnostic default config
         self.defaultConfig = DEFAULT_CONFIG
-        self.browser = Supports.getBrowser()
-        self.browserVersion = Supports.getVersion()
+        self.browser = "peerjs-python"  # Supports.getBrowser()
+        self.browserVersion = "0.1"  # Supports.getVersion()
         # Lists which features are supported
         self.supports = self._supported()
         # Binary stuff

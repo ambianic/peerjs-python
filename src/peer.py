@@ -12,11 +12,11 @@ import json
 import websockets
 from websockets import WebSocket, ConnectionClosed
 import asyncio
-from .lib.socket import Socket
-from .lib.dataconnection import DataConnection
-from .lib.baseconnection import BaseConnection
-from .lib.servermessage import ServerMessage
-from .lib.api import API
+from .socket import Socket
+from .dataconnection import DataConnection
+from .baseconnection import BaseConnection
+from .servermessage import ServerMessage
+from .api import API
 
 log = logging.getLogger(__name__)
 

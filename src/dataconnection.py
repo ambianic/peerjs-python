@@ -11,8 +11,10 @@ from .baseconnection import BaseConnection
 from .servermessage import ServerMessage
 from .encodingqueue import EncodingQueue
 import json
+from aiortc import RTCDataChannel
 
 log = logging.getLogger(__name__)
+
 
 class DataConnection(BaseConnection):
     """Wraps a DataChannel between two Peers."""
