@@ -5,21 +5,34 @@ import time
 import math
 import logging
 import aiohttp
+from .enums import HttpMethod
 
 log = logging.getLogger(__name__)
 
 
-async def _fetch(url):
+async def fetch(url=None, method=None, body=None):
+    """Similar to web browser JavaScript fetch."""
+    if not method:
+        method = HttpMethod.GET
     async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            return await response
+        if method == HttpMethod.GET:
+            async with session.get(url) as response:
+                return await response
+        elif method == HttpMethod.POST:
+            async with session.post(url, data=body) as response:
+                return await response
+        else:
+            raise NotImplementedError(
+                f"HTTP requst method {method} not implemented yet. "
+                "Contributions welcome!")
 
 
 class API:
     """Client side methods for commonly used REST APIs."""
 
-    def __init__(_options):
+    def __init__(self, options=None):
         """Create API instance."""
+        self._options = options
 
     def _buildUrl(self, method: str = None) -> str:
         protocol = "https://" if self._options.secure else "http://"
@@ -40,7 +53,7 @@ class API:
         """Get a unique ID from the server and initialize with it."""
         url = self._buildUrl("id")
         try:
-            response = await _fetch(url)
+            response = await fetch(url)
             if response.status != 200:
                 raise ConnectionError(f'Error. Status:{response.status}')
             return response.text()

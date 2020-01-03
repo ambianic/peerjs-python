@@ -535,11 +535,11 @@ class Peer(AsyncIOEventEmitter):
     def reconnect() -> None:
         """Attempts to reconnect with the same ID."""
         if self.disconnected and not self.destroyed:
-            log.debug(f"Attempting reconnection "
-                      "to server with ID ${this._lastServerId}")
+            log.debug("Attempting reconnection "
+                      f"to server with ID {this._lastServerId}")
             self._disconnected = False
-            self._initialize(this._lastServerId)
-        elif this.destroyed:
+            self._initialize(self._lastServerId)
+        elif self.destroyed:
             raise RuntimeError("This peer cannot reconnect to the server. "
                                "It has already been destroyed.")
         elif not self.disconnected and not self.open:
@@ -550,21 +550,3 @@ class Peer(AsyncIOEventEmitter):
             raise RuntimeError(
                 f"Peer ${this.id} cannot reconnect "
                 "because it is not disconnected from the server!")
-
-    async def listAllPeers() -> []:
-        """Get a list of available peer IDs.
-
-        WARNING: Unintended access to this method is a potential security
-        risk as it would enable malicious clients to offer connection
-        to all peers connected to the signaling server!
-
-        If you're running your own server, you'll
-        want to set allow_discovery: true in the PeerServer options and enforce
-        a crypto safe access key.
-
-        If you're using the PeerJS cloud server,
-        email team@peerjs.com to get the functionality enabled for
-        your key.
-        """
-        peers = await self._api.listAllPeers()
-        return peers

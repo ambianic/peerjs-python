@@ -12,7 +12,7 @@ logger = logging.getLogger("aiortc.contrib.signaling")
 
 
 class PeerSignaling(AsyncIOEventEmitter):
-    """Manage signaling between peer and PnP server."""
+    """Manage signaling between peer and signaling server."""
 
     def __init__(self, room):
         """Configure connection."""
