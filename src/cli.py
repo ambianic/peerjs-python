@@ -1,16 +1,17 @@
 """Register with PNP server and wait for remote peers to connect."""
-
 import argparse
 import asyncio
 import logging
 import time
-
+from .peerroom import PeerRoom
 from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
+from .pnpsignaling import AmbianicPnpSignaling
+
+log = logging.getLogger(__name__)
 
 
 def _server_register(channel, t, message):
-    """Register this peer with PNP server."""
+    """Register this peer with signaling server."""
     print('Registering this client with peer discovery server')
 
 
@@ -28,20 +29,22 @@ def _channel_send(channel, message):
     channel.send(message)
 
 
-def @ps.on("message")
-async def handle_signal():
-    if isinstance(obj, RTCSessionDescription):
-        await pc.setRemoteDescription(obj)
-        if obj.type == "offer":
-            # send answer
-            await pc.setLocalDescription(await pc.createAnswer())
-            await signaling.send(pc.localDescription)
-    elif isinstance(obj, RTCIceCandidate):
-        pc.addIceCandidate(obj)
-    elif obj is None:
-        print("Exiting")
-        break
+async def _consume_signaling(pc, signaling):
+    while True:
+        obj = await signaling.receive()
 
+        if isinstance(obj, RTCSessionDescription):
+            await pc.setRemoteDescription(obj)
+
+            if obj.type == "offer":
+                # send answer
+                await pc.setLocalDescription(await pc.createAnswer())
+                await signaling.send(pc.localDescription)
+        elif isinstance(obj, RTCIceCandidate):
+            pc.addIceCandidate(obj)
+        elif obj is None:
+            print("Exiting")
+            break
 
 time_start = None
 
@@ -73,10 +76,12 @@ async def _run_offer(pc, signaling):
     await signaling.connect()
     channel = pc.createDataChannel("chat")
     _channel_log(channel, "-", "created by local party")
+
     async def send_pings():
         while True:
             _channel_send(channel, "ping %d" % _current_stamp())
             await asyncio.sleep(1)
+
     @channel.on("open")
     def on_open():
         asyncio.ensure_future(send_pings())
@@ -93,39 +98,39 @@ async def _run_offer(pc, signaling):
     await signaling.send(pc.localDescription)
     await _consume_signaling(pc, signaling)
 
-async function discoverRemotePeerId ({ peer, state, commit }) {
-  if (!state.remotePeerId) {
-    // first try to find the remote peer ID in the same room
-    const myRoom = new PeerRoom(peer)
-    console.log('Fetching room members', myRoom)
-    const peerIds = [] // await myRoom.getRoomMembers()
-    console.log('myRoom members', peerIds)
-    const remotePeerId = peerIds.find(
-      pid => pid !== state.myPeerId)
-    if (remotePeerId) {
-      return remotePeerId
-    } else {
-      // unable to auto discover
-      // ask user for help
-      commit(USER_MESSAGE,
-        `Still looking.
-         Please make sure you are are on the same local network.
-        `)
-    }
-  } else {
-    return state.remotePeerId
-  }
-}
+myPeerId = None
+remotePeerId = None
+
+
+async def discoverRemotePeerId(peer=None):
+    """Try to find a remote peer in the same local room."""
+    global remotePeerId
+    if not remotePeerId:
+        # first try to find the remote peer ID in the same room
+        myRoom = PeerRoom(peer)
+        log.debug('Fetching room members', myRoom)
+        peerIds = await myRoom.getRoomMembers()
+        log.debug('myRoom members', peerIds)
+        try:
+            remotePeerId = [pid for pid in peerIds if pid != myPeerId][0]
+            return remotePeerId
+        except IndexError:
+            # no other peers in room
+            return None
+    else:
+        return remotePeerId
 
 if __name__ == "__main__":
+    args = None
     parser = argparse.ArgumentParser(description="Data channels ping/pong")
     parser.add_argument("role", choices=["offer", "answer"])
     parser.add_argument("--verbose", "-v", action="count")
-    add_signaling_arguments(parser)
+    # add_signaling_arguments(parser)
     args = parser.parse_args()
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
-    signaling = create_signaling(args)
+    # signaling = create_signaling(args)
+    signaling = AmbianicPnpSignaling(args)
     pc = RTCPeerConnection()
     if args.role == "offer":
         coro = _run_offer(pc, signaling)

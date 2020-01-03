@@ -8,10 +8,10 @@ from pyee import AsyncIOEventEmitter
 from aiortc import RTCIceCandidate, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 
-logger = logging.getLogger("aiortc.contrib.signaling")
+log = logging.getLogger(__name__)
 
 
-class PeerSignaling(AsyncIOEventEmitter):
+class AmbianicPnpSignaling(AsyncIOEventEmitter):
     """Manage signaling between peer and signaling server."""
 
     def __init__(self, room):
