@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from .peerroom import PeerRoom
-from aiortc import RTCIceCandidate, RTCSessionDescription
+# from aiortc import RTCIceCandidate, RTCSessionDescription
 from .peer import Peer
 
 log = logging.getLogger(__name__)
@@ -17,20 +17,21 @@ time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
 
-async def _consume_signaling(pc, signaling):
-    while True:
-        obj = await signaling.receive()
-        if isinstance(obj, RTCSessionDescription):
-            await pc.setRemoteDescription(obj)
-            if obj.type == "offer":
-                # send answer
-                await pc.setLocalDescription(await pc.createAnswer())
-                await signaling.send(pc.localDescription)
-        elif isinstance(obj, RTCIceCandidate):
-            pc.addIceCandidate(obj)
-        elif obj is None:
-            print("Exiting")
-            break
+
+# async def _consume_signaling(pc, signaling):
+#     while True:
+#         obj = await signaling.receive()
+#         if isinstance(obj, RTCSessionDescription):
+#             await pc.setRemoteDescription(obj)
+#             if obj.type == "offer":
+#                 # send answer
+#                 await pc.setLocalDescription(await pc.createAnswer())
+#                 await signaling.send(pc.localDescription)
+#         elif isinstance(obj, RTCIceCandidate):
+#             pc.addIceCandidate(obj)
+#         elif obj is None:
+#             print("Exiting")
+#             break
 
 
 async def join_peer_room(peer=None):
