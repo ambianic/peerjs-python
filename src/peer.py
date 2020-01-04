@@ -144,13 +144,17 @@ class Peer(AsyncIOEventEmitter):
             return
 
         if userId:
-            self._initialize(userId)
+            self._id = id
         else:
             try:
                 id = await self._api.retrieveId()
-                self._initialize(id)
+                self._id = id
             except Exception as e:
                 self._abort(PeerErrorType.ServerError, e)
+
+    def start(self):
+        """Activate Peer instance."""
+        await self.socket.start(id, self._options.token)
 
     @property
     def id(self, ) -> None:
@@ -191,7 +195,7 @@ class Peer(AsyncIOEventEmitter):
         return self._disconnected
 
     @property
-    def _createServerConnection(self, ) -> Socket:
+    def _createServerConnection(self) -> Socket:
         socket = Socket(
             self._options.secure,
             self._options.host,
@@ -222,11 +226,6 @@ class Peer(AsyncIOEventEmitter):
                             "Underlying socket is already closed.")
 
         return socket
-
-    def _initialize(self, id: str) -> None:
-        """ Initialize a connection with the server."""
-        self._id = id
-        self.socket.start(id, self._options.token)
 
     def _handleMessage(self, message: ServerMessage) -> None:
         """Handles messages from the server."""

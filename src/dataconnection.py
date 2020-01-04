@@ -174,10 +174,8 @@ class DataConnection(BaseConnection):
             self.provider._removeConnection(self)
         self.provider = None
         if self.dataChannel:
-            self.dataChannel.onopen = None
-            self.dataChannel.onmessage = None
-            self.dataChannel.onclose = None
-            self._dc = null
+            self.dataChannel.removeAllListeners()
+            self._dc = None
         if self._encodingQueue:
             self._encodingQueue.destroy()
             self._encodingQueue.removeAllListeners()
