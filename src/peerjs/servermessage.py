@@ -1,5 +1,5 @@
 """Wrapper fro messages from a signaling server."""
-from enums import ServerMessageType
+from .enums import ServerMessageType
 
 
 class ServerMessage:

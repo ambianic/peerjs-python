@@ -1,19 +1,18 @@
 """Convenience wrapper around RTCDataChannel."""
 from .util import util
 import logging
-from negotiator import Negotiator
-from enums import \
+from .negotiator import Negotiator
+from .enums import \
   ConnectionType, \
   ConnectionEventType, \
   SerializationType, \
   ServerMessageType
 from .baseconnection import BaseConnection
 from .servermessage import ServerMessage
-from .encodingqueue import EncodingQueue
+# from .encodingqueue import EncodingQueue
 import json
 from aiortc import RTCDataChannel
 import asyncio
-from .peer import Peer
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class DataConnection(BaseConnection):
         """Return current data buffer size."""
         return self._bufferSize
 
-    def __init__(self, peerId: str = None, provider: Peer = None, **options):
+    def __init__(self, peerId: str = None, provider=None, **options):
         """Create a DataConnection instance."""
         super(peerId, provider, options)
         self._negotiator: Negotiator = None
@@ -60,7 +59,7 @@ class DataConnection(BaseConnection):
         # }
 
         self._dc: RTCDataChannel
-        self._encodingQueue = EncodingQueue()
+        # self._encodingQueue = EncodingQueue()
         if options.connectionId:
             self.connectionId = options.connectionId
         else:
@@ -184,7 +183,7 @@ class DataConnection(BaseConnection):
         if self._negotiator:
             self._negotiator.cleanup()
             self._negotiator = None
-        if self.provider:
+        if self.provider:  # provider: Peer
             self.provider._removeConnection(self)
         self.provider = None
         if self.dataChannel:

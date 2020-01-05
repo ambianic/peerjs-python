@@ -67,7 +67,7 @@ class Util:
             supported['audioVideo'] = True
             dc: RTCDataChannel = None
             try:
-                dc = pc.createDataChannel("_PEERJSTEST", {'ordered': True})
+                dc = pc.createDataChannel(label="_PEERJSTEST", ordered=True)
                 supported['data'] = True
                 supported['reliable'] = True if dc.ordered else False
                 # Test for Binary mode support

@@ -137,7 +137,7 @@ async def pnp_service_connect() -> Peer:
     # Unless the user explicitly requests a refresh.
     global myPeerId
     log.info('pnpService: last saved myPeerId', myPeerId)
-    peer = Peer(myPeerId, {
+    peer = Peer(id=myPeerId, {
       'host': AMBIANIC_PNP_HOST,
       'port': AMBIANIC_PNP_PORT,
       'secure': AMBIANIC_PNP_SECURE,
@@ -192,6 +192,9 @@ if __name__ == "__main__":
         log.info('KeyboardInterrupt detected. Exiting...')
         pass
     finally:
-        loop.run_until_complete(peer.destroy())
+        if discoveryLoop:
+            discoveryLoop.cancel()
+        if peer:
+            loop.run_until_complete(peer.destroy())
         # loop.run_until_complete(pc.close())
         # loop.run_until_complete(signaling.close())

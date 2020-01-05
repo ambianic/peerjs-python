@@ -1,8 +1,7 @@
 """Base abstractions for peer to peer connections."""
 from pyee import AsyncIOEventEmitter
-from ..peer import Peer
-from servermessage import ServerMessage
-from enums import ConnectionType
+from .servermessage import ServerMessage
+from .enums import ConnectionType
 from abc import abstractmethod
 from aiortc import RTCPeerConnection
 
@@ -22,7 +21,7 @@ class BaseConnection(AsyncIOEventEmitter):
     def __init__(
         self,
         peer: str = None,
-        provider: Peer = None,
+        provider=None,  # provider: Peer
         options: any = None
          ):
         """Create connection construct."""

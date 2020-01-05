@@ -1,11 +1,11 @@
 """Client side abstraction for commonly used REST APIs."""
 
-from util import util
 import time
 import math
 import logging
 import aiohttp
 from .enums import HttpMethod
+from .util import util
 
 log = logging.getLogger(__name__)
 
