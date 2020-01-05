@@ -2,9 +2,9 @@
 # import argparse
 import asyncio
 import logging
-from .peerroom import PeerRoom
+from peerjs.peerroom import PeerRoom
 # from aiortc import RTCIceCandidate, RTCSessionDescription
-from .peer import Peer
+from peerjs.peer import Peer
 
 log = logging.getLogger(__name__)
 
