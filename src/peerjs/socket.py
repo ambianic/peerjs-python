@@ -4,7 +4,7 @@ import logging
 from .enums import SocketEventType
 import json
 import websockets
-from websockets import WebSocket, ConnectionClosed
+from websockets.exceptions import ConnectionClosedError
 import asyncio
 
 log = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class Socket(AsyncIOEventEmitter):
         self._disconnected: bool = True
         self._id: str = None
         self._messagesQueue: list = []
-        self._websocket: WebSocket = None
+        self._websocket: websockets.client.WebSocketClientProtocol = None
         self._receiver: asyncio.Task = None
 
     async def _connect(self, wss_url=None):
@@ -61,8 +61,8 @@ class Socket(AsyncIOEventEmitter):
                     log.warning("Invalid server message: {}, error {}",
                                 message, e)
                 await self.emit('message', message)
-        except ConnectionClosed:
-            log.debug("Websocket connection closed.")
+        except ConnectionClosedError as err:
+            log.warning("Websocket connection closed with error. %s", err)
         except RuntimeError as e:
             log.warning("Websocket connection error: {}", e)
         finally:

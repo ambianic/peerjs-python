@@ -1,22 +1,22 @@
 """Helper utility structures and methods."""
-from .supports import Supports
 from aiortc import RTCDataChannel, RTCPeerConnection
+from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 import logging
 import math
-import asyncio
-import aiofiles
+# import asyncio
+# import aiofiles
 
 log = logging.getLogger(__name__)
 
-DEFAULT_CONFIG = {
-  'iceServers': [
-    {'urls': "stun:stun.l.google.com:19302"},
-    {'urls': "turn:0.peerjs.com:3478",
-     'username': "peerjs",
-     'credential': "peerjsp"}
-  ],
-  'sdpSemantics': "unified-plan"
-}
+DEFAULT_CONFIG = RTCConfiguration(
+    iceServers=[
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(urls=["turn:0.peerjs.com:3478"],
+                     username="peerjs",
+                     credential="peerjsp"
+                     )
+        ]
+    )
 
 
 class Util:
@@ -52,28 +52,28 @@ class Util:
 
     def _supported(self):
         supported = {
-            'browser': Supports.isBrowserSupported(),
-            'webRTC': Supports.isWebRTCSupported(),
+            'browser': 'aiortc',
+            'webRTC': True,
             'audioVideo': False,
             'data': False,
             'binaryBlob': False,
             'reliable': False,
         }
-        if not supported.webRTC:
+        if not supported['webRTC']:
             return supported
-        pc: RTCPeerConnection
+        pc: RTCPeerConnection = None
         try:
             pc = RTCPeerConnection(DEFAULT_CONFIG)
-            supported.audioVideo = True
-            dc: RTCDataChannel
+            supported['audioVideo'] = True
+            dc: RTCDataChannel = None
             try:
                 dc = pc.createDataChannel("_PEERJSTEST", {'ordered': True})
-                supported.data = True
-                supported.reliable = True if dc.ordered else False
+                supported['data'] = True
+                supported['reliable'] = True if dc.ordered else False
                 # Test for Binary mode support
                 try:
                     dc.binaryType = "blob"
-                    supported.binaryBlob = not Supports.isIOS
+                    supported.binaryBlob = False
                 except Exception:
                     pass
             finally:
@@ -110,14 +110,14 @@ class Util:
         self._dataCount += 1
         return chunks
 
-    async def blobToArrayBuffer(self, blob=None, callback=None) -> None:
-        """Load a blog into an array buffer."""
-        # callback type hint: (arg: ArrayBuffer) -> None
-        async def load_file():
-            async with aiofiles.open(blob, mode='r') as f:
-                contents = await f.read()
-                callback(contents)
-        asyncio.create_task(load_file)
+    # async def blobToArrayBuffer(self, blob=None, callback=None) -> None:
+    #     """Load a blog into an array buffer."""
+    #     # callback type hint: (arg: ArrayBuffer) -> None
+    #     async def load_file():
+    #         async with aiofiles.open(blob, mode='r') as f:
+    #             contents = await f.read()
+    #             callback(contents)
+    #     asyncio.create_task(load_file)
 
     def binaryStringToArrayBuffer(binary: str = None) -> bytes:
         """Convert a string to an immutable byte array."""

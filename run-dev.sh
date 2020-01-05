@@ -5,5 +5,5 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 echo $SCRIPTPATH
 
 set -ex
-pip3 install --editable src
+# pip3 install --editable src
 python3 $SCRIPTPATH/cli.py
