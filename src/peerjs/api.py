@@ -1,7 +1,7 @@
 """Client side abstraction for commonly used REST APIs."""
 
 import logging
-import math
+import random
 import time
 from typing import Any
 
@@ -13,21 +13,6 @@ from .util import util
 log = logging.getLogger(__name__)
 
 
-async def fetch(url=None, method=None, body=None):
-    """Similar to web browser JavaScript fetch."""
-    if not method:
-        method = HttpMethod.GET
-    async with aiohttp.ClientSession() as session:
-        if method == HttpMethod.GET:
-            async with session.get(url) as response:
-                return await response
-        elif method == HttpMethod.POST:
-            async with session.post(url, data=body) as response:
-                return await response
-        else:
-            raise NotImplementedError(
-                f"HTTP requst method {method} not implemented yet. "
-                "Contributions welcome!")
 
 
 class API:
@@ -36,27 +21,40 @@ class API:
     def __init__(self, options: Any = None):
         """Create API instance."""
         self._options = options
+        log.debug('API options: %s', options)
 
     def _buildUrl(self, method: str = None) -> str:
         protocol = "https://" if self._options.secure else "http://"
-        url = \
-            protocol + \
-            self._options.host + \
-            ":" + \
-            self._options.port + \
-            self._options.path + \
-            self._options.key + \
-            "/" + \
-            method
-        queryString = "?ts=" + time.monotonous() + "" + math.random()
+        url = f'{protocol}{self._options.host}:'
+        f'{self._options.port}{self._options.path}{self._options.key}'
+        f'/method'
+        queryString = f'?ts={time.monotonic()}{random.random()}'
         url += queryString
+        log.debug('built url: %s', url)
         return url
+
+    @staticmethod
+    async def fetch(url=None, method=None, body=None):
+        """Similar to web browser JavaScript fetch."""
+        if not method:
+            method = HttpMethod.GET
+        async with aiohttp.ClientSession() as session:
+            if method == HttpMethod.GET:
+                async with session.get(url) as response:
+                    return await response
+            elif method == HttpMethod.POST:
+                async with session.post(url, data=body) as response:
+                    return await response
+            else:
+                raise NotImplementedError(
+                    f"HTTP requst method {method} not implemented yet. "
+                    "Contributions welcome!")
 
     async def retrieveId(self):
         """Get a unique ID from the server and initialize with it."""
         url = self._buildUrl("id")
         try:
-            response = await fetch(url)
+            response = await API.fetch(url)
             if response.status != 200:
                 raise ConnectionError(f'Error. Status:{response.status}')
             return response.text()

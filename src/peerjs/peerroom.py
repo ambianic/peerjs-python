@@ -3,9 +3,10 @@
 Same room defined as shared WiFi/LAN and Public IP Address.
 """
 
-from .peer import Peer
 import logging
+
 from .api import API
+from .peer import Peer
 
 log = logging.getLogger(__name__)
 
@@ -23,15 +24,17 @@ class PeerRoom:
     async def _restCall(self, http_method=None, rest_method=None):
         log.debug('REST Call {} {}', http_method, rest_method)
         url = self._api._buildUrl(method=rest_method)
+        response = None
         try:
-            response = await self._api._fetch(url=url, method=http_method)
+            response = await API.fetch(url=url, method=http_method)
             if response.status != 200:
                 raise ConnectionError()
             return response.json()
         except Exception as error:
             msg = f"REST Error for {http_method} {url}."
-            f" HTTP Response Status:{response.status}"
             log.error(msg, error)
+            if response is not None:
+                log.error(f'HTTP Response Status %s', response.status)
             raise ConnectionError(msg, error)
 
     async def _getRoomId(self):
@@ -51,7 +54,7 @@ class PeerRoom:
         log.debug('Joined room %s, Members: %s', self._roomId, members)
         return members
 
-    async def getRoomMembers(self, roomId):
+    async def getRoomMembers(self):
         """Get the list of peers in a room."""
         if not self._roomId:
             members = await self.join()

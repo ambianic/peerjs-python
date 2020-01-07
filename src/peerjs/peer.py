@@ -7,7 +7,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any, List
 
-import attr
 from pyee import AsyncIOEventEmitter, BaseEventEmitter
 
 from .api import API
@@ -45,13 +44,14 @@ class PeerOptions:
     """Peer configuration options."""
 
     debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
-    host: str = attr.ib(default=util.CLOUD_HOST)
+    host: str = util.CLOUD_HOST
     port: int = util.CLOUD_PORT
     path: str = "/"
     key: str = PEER_DEFAULT_KEY
     token: str = util.randomToken()
     config: Any = util.defaultConfig
     secure: bool = False
+    pingInterval: int = 5  # ping to signaling server in seconds
 
 
 # 0: None, 1: Errors, 2: Warnings, 3: All logs
@@ -205,7 +205,6 @@ class Peer(AsyncIOEventEmitter):
         """Return True if peer is disconnected from signaling server."""
         return self._disconnected
 
-    @property
     def _createServerConnection(self) -> Socket:
         socket = Socket(
             self._options.secure,
@@ -486,7 +485,7 @@ class Peer(AsyncIOEventEmitter):
         error.type = type
         self.emit(PeerEventType.Error, error)
 
-    def destroy(self) -> None:
+    async def destroy(self) -> None:
         """Destroy Peer and close all active connections.
 
         Close all active peer connections and the active server connection.

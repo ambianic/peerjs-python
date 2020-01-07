@@ -1,8 +1,9 @@
 """Helper utility structures and methods."""
 import logging
+import math
 import random
+from dataclasses import dataclass
 
-from aiortc import RTCDataChannel, RTCPeerConnection
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
 # import asyncio
@@ -19,6 +20,18 @@ DEFAULT_CONFIG = RTCConfiguration(
                      )
         ]
     )
+
+
+@dataclass
+class UtilSupports:
+    """WebRTC parameters supported by this library."""
+
+    webRTC: bool = True
+    browser: str = 'aiortc'
+    audioVideo: bool = True
+    data: bool = True
+    binaryBlob: bool = False
+    reliable: bool = True
 
 
 class Util:
@@ -43,48 +56,19 @@ class Util:
         self.browser = "peerjs-python"  # Supports.getBrowser()
         self.browserVersion = "0.1"  # Supports.getVersion()
         # Lists which features are supported
-        self.supports = self._supported()
         # Binary stuff
         self._dataCount: int = 1
+        self._supports = UtilSupports()
 
     def validateId(self, id: str) -> bool:
         """Ensure alphanumeric ids."""
         # Allow empty ids
         return not id or id.isalnum()
 
-    def _supported(self):
-        supported = {
-            'browser': 'aiortc',
-            'webRTC': True,
-            'audioVideo': False,
-            'data': False,
-            'binaryBlob': False,
-            'reliable': False,
-        }
-        if not supported['webRTC']:
-            return supported
-        pc: RTCPeerConnection = None
-        try:
-            pc = RTCPeerConnection(DEFAULT_CONFIG)
-            supported['audioVideo'] = True
-            dc: RTCDataChannel = None
-            try:
-                dc = pc.createDataChannel(label="_PEERJSTEST", ordered=True)
-                supported['data'] = True
-                supported['reliable'] = True if dc.ordered else False
-                # Test for Binary mode support
-                try:
-                    dc.binaryType = "blob"
-                    supported.binaryBlob = False
-                except Exception:
-                    pass
-            finally:
-                if dc:
-                    dc.close()
-        finally:
-            if pc:
-                pc.close()
-        return supported
+    @property
+    def supports(self):
+        """Return dict of supported WebRTC features."""
+        return self._supports
 
     def chunk(self, blob):
         """Break up a blob into a list of smaller chunks for the wire."""

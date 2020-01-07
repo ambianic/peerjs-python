@@ -152,7 +152,7 @@ async def pnp_service_connect() -> Peer:
     await peer.start()
     log.info('pnpService: peer activated')
     _setPnPServiceConnectionHandlers(peer)
-    make_discoverable(peer=peer)
+    await make_discoverable(peer=peer)
     return peer
 
 
@@ -163,7 +163,7 @@ async def make_discoverable(peer=None):
     async def periodic():
         while True:
             log.info('Making peer discoverable.')
-            join_peer_room(peer=peer)
+            await join_peer_room(peer=peer)
             await asyncio.sleep(5)
 
     def stop():
