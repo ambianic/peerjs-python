@@ -43,7 +43,6 @@ PEER_DEFAULT_KEY = "peerjs"
 class PeerOptions:
     """Peer configuration options."""
 
-    debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
     host: str = util.CLOUD_HOST
     port: int = util.CLOUD_PORT
     path: str = "/"
@@ -52,15 +51,6 @@ class PeerOptions:
     config: Any = util.defaultConfig
     secure: bool = False
     pingInterval: int = 5  # ping to signaling server in seconds
-
-
-# 0: None, 1: Errors, 2: Warnings, 3: All logs
-DEBUG_LEVELS = {
-    0: logging.CRITICAL,
-    1: logging.ERROR,
-    2: logging.WARNING,
-    3:  logging.DEBUG
-}
 
 
 # def _object_from_string(message_str):
@@ -132,14 +122,6 @@ class Peer(AsyncIOEventEmitter):
             if self._options.path[len(self._options.path) - 1] != "/":
                 self._options.path += "/"
 
-        self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
-
-        if 0 <= self._options.debug <= 3:
-            log.setLevel(DEBUG_LEVELS[self._options.debug])
-        else:
-            log.warning('Debug level option specified as {} '
-                        'which is outside the allowed 0-3 range.'
-                        'Setting to lowest log level: 0', self._options.debug)
         self._api = API(peer_options)
 
     async def start(self):
@@ -160,6 +142,7 @@ class Peer(AsyncIOEventEmitter):
                 await self._abort(PeerErrorType.ServerError, e)
                 return
         await self.socket.start(self._id, self._options.token)
+        log.info('Peer started with UUID: %s', self._id)
 
     @property
     def id(self, ) -> None:
@@ -495,7 +478,7 @@ class Peer(AsyncIOEventEmitter):
         if self.destroyed:
             return
         log.debug(f'Destroy peer with ID:${self.id}')
-        self.disconnect()
+        await self.disconnect()
         self._cleanup()
         self._destroyed = True
         self.emit(PeerEventType.Close)
@@ -515,7 +498,7 @@ class Peer(AsyncIOEventEmitter):
         for connection in connections:
             connection.close()
 
-    def disconnect(self) -> None:
+    async def disconnect(self) -> None:
         """Disconnects the Peer's connection to the PeerServer.
 
         Does not close any active connections.
@@ -530,7 +513,7 @@ class Peer(AsyncIOEventEmitter):
         self._disconnected = True
         self._open = False
         if (self.socket is not None):
-            self.socket.close()
+            await self.socket.close()
         self._lastServerId = currentId
         self._id = None
         self.emit(PeerEventType.Disconnected, currentId)

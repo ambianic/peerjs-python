@@ -23,19 +23,11 @@ class PeerRoom:
 
     async def _restCall(self, http_method=None, rest_method=None):
         log.debug('REST Call %s %s', http_method, rest_method)
-        url = self._api._buildUrl(method=rest_method)
-        response = None
-        try:
-            response = await API.fetch(url=url, method=http_method)
-            if response.status != 200:
-                raise ConnectionError()
-            return response.json()
-        except Exception as error:
-            msg = f"REST Error for {http_method} {url}."
-            log.error(msg, error)
-            if response is not None:
-                log.error(f'HTTP Response Status %s', response.status)
-            raise ConnectionError(msg, error)
+        url = self._api._buildUrl(rest_method=rest_method)
+        status, text = await API.fetch(url=url, method=http_method)
+        if status != 200:
+            raise ConnectionError(f'Unexpected status code {status}')
+        return text
 
     @property
     def id(self):

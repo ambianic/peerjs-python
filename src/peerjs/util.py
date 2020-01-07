@@ -2,6 +2,7 @@
 import logging
 import math
 import random
+import re
 from dataclasses import dataclass
 
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
@@ -60,10 +61,12 @@ class Util:
         self._dataCount: int = 1
         self._supports = UtilSupports()
 
-    def validateId(self, id: str) -> bool:
+    def validateId(self, id: str = None) -> bool:
         """Ensure alphanumeric ids."""
         # Allow empty ids
-        return not id or id.isalnum()
+        valid = not id or re.match('^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$', str)
+        log.debug('ID %s is %s valid', id, "" if valid else "not")
+        return valid
 
     @property
     def supports(self):

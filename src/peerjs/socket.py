@@ -8,6 +8,7 @@ from pyee import AsyncIOEventEmitter
 from websockets.exceptions import ConnectionClosedError
 
 from .enums import SocketEventType
+from .servermessage import ServerMessage
 
 log = logging.getLogger(__name__)
 
@@ -51,18 +52,18 @@ class Socket(AsyncIOEventEmitter):
         return websocket
 
     async def _receive(self, websocket=None):
-        assert websocket
+        assert self._websocket
         try:
             # receive messages until websocket is closed
-            async for message in websocket:
+            async for message in self._websocket:
                 try:
-                    data = json.loads(message)
-                    log.log("Server message received:", data)
+                    data = ServerMessage.from_json(message)
+                    log.info("Server message received: %s", data)
                     self.emit(SocketEventType.Message, data)
                 except Exception as e:
                     log.warning("Invalid server message: {}, error {}",
                                 message, e)
-                await self.emit('message', message)
+                self.emit('message', message)
         except ConnectionClosedError as err:
             log.warning("Websocket connection closed with error. %s", err)
         except RuntimeError as e:
@@ -82,11 +83,11 @@ class Socket(AsyncIOEventEmitter):
         if (self._websocket or not self._disconnected):
             # socket already connected
             return
-        await self._connect(wss_url=_ws_url)
+        self._websocket = await self._connect(wss_url=_ws_url)
         # ask asyncio to schedule a receiver soon
         # it will end when the socket closes
         self._receiver = asyncio.create_task(
-            self._receive(websocket=self._websocket))
+            self._receive())
 
     # Is the websocket currently open?
     def _wsOpen(self) -> bool:
@@ -122,15 +123,15 @@ class Socket(AsyncIOEventEmitter):
         message = json.dumps(data)
         self._websocket.send(message)
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close socket and stop any pending communication."""
         if not self._disconnected:
             log.debug("Closing socket.")
-            self._cleanup()
+            await self._cleanup()
             self._disconnected = True
             self.emit(SocketEventType.Disconnected)
 
-    def _cleanup(self) -> None:
+    async def _cleanup(self) -> None:
         if self._websocket:
-            self._websocket.close()
+            await self._websocket.close()
             self._websocket = None

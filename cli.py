@@ -43,9 +43,9 @@ async def join_peer_room(peer=None):
     # first try to find the remote peer ID in the same room
     assert peer
     myRoom = PeerRoom(peer)
-    log.debug('Fetching room members %s', myRoom.id)
+    log.info('Fetching room members %s', myRoom.id)
     peerIds = await myRoom.getRoomMembers()
-    log.debug('myRoom members %r', peerIds)
+    log.info('myRoom members %r', peerIds)
 
 
 def _setPnPServiceConnectionHandlers(peer=None):
@@ -144,8 +144,7 @@ async def pnp_service_connect() -> Peer:
     options = PeerOptions(
         host=AMBIANIC_PNP_HOST,
         port=AMBIANIC_PNP_PORT,
-        secure=AMBIANIC_PNP_SECURE,
-        debug=2
+        secure=AMBIANIC_PNP_SECURE
     )
     peer = Peer(id=myPeerId, peer_options=options)
     log.info('pnpService: peer created')
@@ -153,34 +152,32 @@ async def pnp_service_connect() -> Peer:
     log.info('pnpService: peer activated')
     _setPnPServiceConnectionHandlers(peer)
     await make_discoverable(peer=peer)
-    return peer
 
 
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
     assert peer
-
-    async def periodic():
-        while True:
-            log.info('Making peer discoverable.')
+    while True:
+        log.info('Making peer discoverable.')
+        try:
             await join_peer_room(peer=peer)
-            await asyncio.sleep(5)
-
-    def stop():
-        discoveryLoop.cancel()
-
-    discoveryLoop = asyncio.create_task(periodic())
+        except Exception as e:
+            log.warning('Unable to join room. '
+                        'Will retry in a few seconds. '
+                        'Error %r', e)
+        await asyncio.sleep(5)
 
 
 def _config_logger():
-    logging.basicConfig(level=logging.WARNING)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
     format_cfg = '%(asctime)s %(levelname)-4s ' \
         '%(pathname)s.%(funcName)s(%(lineno)d): %(message)s'
     datefmt_cfg = '%Y-%m-%d %H:%M:%S'
     fmt = logging.Formatter(fmt=format_cfg,
                             datefmt=datefmt_cfg, style='%')
-    root_logger = logging.getLogger()
     ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
     root_logger.handlers = []
     root_logger.addHandler(ch)
@@ -213,8 +210,6 @@ if __name__ == "__main__":
         log.info('KeyboardInterrupt detected. Exiting...')
         pass
     finally:
-        if discoveryLoop:
-            discoveryLoop.cancel()
         if peer:
             loop.run_until_complete(peer.destroy())
         # loop.run_until_complete(pc.close())
