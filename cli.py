@@ -2,9 +2,13 @@
 # import argparse
 import asyncio
 import logging
-from peerjs.peerroom import PeerRoom
+import sys
+
 # from aiortc import RTCIceCandidate, RTCSessionDescription
-from peerjs.peer import Peer
+from peerjs.peer import Peer, PeerOptions
+from peerjs.peerroom import PeerRoom
+
+print(sys.version)
 
 log = logging.getLogger(__name__)
 
@@ -137,12 +141,13 @@ async def pnp_service_connect() -> Peer:
     # Unless the user explicitly requests a refresh.
     global myPeerId
     log.info('pnpService: last saved myPeerId', myPeerId)
-    peer = Peer(id=myPeerId, {
-      'host': AMBIANIC_PNP_HOST,
-      'port': AMBIANIC_PNP_PORT,
-      'secure': AMBIANIC_PNP_SECURE,
-      'debug': 2
-      })
+    options = PeerOptions(
+        host=AMBIANIC_PNP_HOST,
+        port=AMBIANIC_PNP_PORT,
+        secure=AMBIANIC_PNP_SECURE,
+        debug=2
+    )
+    peer = Peer(id=myPeerId, peer_options=options)
     log.info('pnpService: peer created')
     await peer.start()
     log.info('pnpService: peer activated')
@@ -175,7 +180,8 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    log.debug('Log level set to debug')
     # signaling = create_signaling(args)
     # signaling = AmbianicPnpSignaling(args)
     # pc = RTCPeerConnection()

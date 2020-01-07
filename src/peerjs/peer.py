@@ -1,53 +1,57 @@
 """Python port of PeerJS client with built in signaling to PeerJS server."""
-from typing import List
-from pyee import AsyncIOEventEmitter, BaseEventEmitter
-import logging
-from .enums import \
-    ConnectionType, \
-    PeerErrorType, \
-    PeerEventType, \
-    SocketEventType, \
-    ServerMessageType
 # import json
 # import websockets
 # from websockets import WebSocket, ConnectionClosed
 import asyncio
-from .socket import Socket
-from .dataconnection import DataConnection
-from .baseconnection import BaseConnection
-from .servermessage import ServerMessage
+import logging
+from dataclasses import dataclass
+from typing import Any, List
+
+import attr
+from pyee import AsyncIOEventEmitter, BaseEventEmitter
+
 from .api import API
+from .baseconnection import BaseConnection
+from .dataconnection import DataConnection
+from .enums import (
+    ConnectionType,
+    PeerErrorType,
+    PeerEventType,
+    ServerMessageType,
+    SocketEventType,
+)
+from .servermessage import ServerMessage
+from .socket import Socket
 from .util import util
 
 log = logging.getLogger(__name__)
 
 
+@dataclass
 class PeerConnectOption:
     """Peer connection configuration options."""
 
-    def __init__(self, **kwargs):
-        """Create a peer connection options instance."""
-        self.label: str = None
-        self.metadata = None
-        self.serialization: str = None
-        self.reliable: bool = None
+    label: str = None
+    metadata: Any = None
+    serialization: str = None
+    reliable: bool = None
 
 
+PEER_DEFAULT_KEY = "peerjs"
+
+
+@dataclass
 class PeerOptions:
     """Peer configuration options."""
 
-    def __init__(self, **kwargs):
-        """Create a peer options instance."""
-        self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
-        self.host: str = util.CLOUD_HOST
-        self.port: int = util.CLOUD_PORT
-        self.path: str = "/"
-        self.key: str = Peer.DEFAULT_KEY
-        self.token: str = util.randomToken()
-        self.config = util.defaultConfig
-        self.secure: bool = None
-        for k, v in kwargs:
-            setattr(self, k, v)
+    debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
+    host: str = attr.ib(default=util.CLOUD_HOST)
+    port: int = util.CLOUD_PORT
+    path: str = "/"
+    key: str = PEER_DEFAULT_KEY
+    token: str = util.randomToken()
+    config: Any = util.defaultConfig
+    secure: bool = False
 
 
 # 0: None, 1: Errors, 2: Warnings, 3: All logs
@@ -88,15 +92,15 @@ DEBUG_LEVELS = {
 class Peer(AsyncIOEventEmitter):
     """A peer that can initiate direct connections with other peers."""
 
-    def __init__(self, id: str = None, **options):
+    def __init__(self,
+                 id: str = None,
+                 peer_options: PeerOptions = None):
         """Create a peer instance."""
-        super()
+        super().__init__()
 
-        self._DEFAULT_KEY = "peerjs"
-
-        self._options: PeerOptions
-        self._api: API
-        self._socket: Socket
+        self._options: PeerOptions = peer_options
+        self._api: API = None
+        self._socket: Socket = None
 
         self._id: str = id
         self._lastServerId: str = None
@@ -119,13 +123,13 @@ class Peer(AsyncIOEventEmitter):
         self._id = id
 
         # Configure options
-        self._options = PeerOptions(**options)
+        self._options = peer_options
 
         # Set path correctly.
         if self._options.path:
             if self._options.path[0] != "/":
                 self._options.path = "/" + self._options.path
-            if self._options.path[self._options.path.length - 1] != "/":
+            if self._options.path[len(self._options.path) - 1] != "/":
                 self._options.path += "/"
 
         self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
@@ -136,7 +140,7 @@ class Peer(AsyncIOEventEmitter):
             log.warning('Debug level option specified as {} '
                         'which is outside the allowed 0-3 range.'
                         'Setting to lowest log level: 0', self._options.debug)
-        self._api = API(**options)
+        self._api = API(peer_options)
 
     async def start(self):
         """Activate Peer instance."""
@@ -527,7 +531,8 @@ class Peer(AsyncIOEventEmitter):
         log.debug(f'Disconnect peer with ID:${currentId}')
         self._disconnected = True
         self._open = False
-        self.socket.close()
+        if (self.socket is not None):
+            self.socket.close()
         self._lastServerId = currentId
         self._id = None
         self.emit(PeerEventType.Disconnected, currentId)

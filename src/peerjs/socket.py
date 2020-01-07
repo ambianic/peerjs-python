@@ -1,11 +1,13 @@
 """Convenience class to manage peer websocket connection."""
-from pyee import AsyncIOEventEmitter
-import logging
-from .enums import SocketEventType
-import json
-import websockets
-from websockets.exceptions import ConnectionClosedError
 import asyncio
+import json
+import logging
+
+import websockets
+from pyee import AsyncIOEventEmitter
+from websockets.exceptions import ConnectionClosedError
+
+from .enums import SocketEventType
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +28,7 @@ class Socket(AsyncIOEventEmitter):
         pingInterval: int = 5000
     ) -> None:
         """Create new wrapper around websocket."""
-        self.super()
+        super().__init__()
         wsProtocol = "wss://" if secure else "ws://"
         self._baseUrl: str = f"{wsProtocol}{host}:{port}{path}peerjs?key={key}"
         self._disconnected: bool = True

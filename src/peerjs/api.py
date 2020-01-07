@@ -1,9 +1,12 @@
 """Client side abstraction for commonly used REST APIs."""
 
-import time
-import math
 import logging
+import math
+import time
+from typing import Any
+
 import aiohttp
+
 from .enums import HttpMethod
 from .util import util
 
@@ -30,7 +33,7 @@ async def fetch(url=None, method=None, body=None):
 class API:
     """Client side methods for commonly used REST APIs."""
 
-    def __init__(self, options=None):
+    def __init__(self, options: Any = None):
         """Create API instance."""
         self._options = options
 

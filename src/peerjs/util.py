@@ -1,8 +1,10 @@
 """Helper utility structures and methods."""
+import logging
+import random
+
 from aiortc import RTCDataChannel, RTCPeerConnection
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
-import logging
-import math
+
 # import asyncio
 # import aiofiles
 
@@ -119,18 +121,18 @@ class Util:
     #             callback(contents)
     #     asyncio.create_task(load_file)
 
-    def binaryStringToArrayBuffer(binary: str = None) -> bytes:
+    def binaryStringToArrayBuffer(self, binary: str = None) -> bytes:
         """Convert a string to an immutable byte array."""
         byteArray = binary.encode()
         return byteArray
 
-    def randomToken() -> str:
+    def randomToken(self) -> str:
         """Generate a random token."""
-        return math.random() \
-            .toString(36) \
-            .substr(2)
+        token = f'{random.random()}'[2:]
+        log.debug('Generated random token: %s', token)
+        return
 
-    def isSecure(url=None) -> bool:
+    def isSecure(self, url=None) -> bool:
         """Return True if using https for the signaling server connection."""
         return url.startswith("https:")
 
