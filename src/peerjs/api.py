@@ -13,8 +13,6 @@ from .util import util
 log = logging.getLogger(__name__)
 
 
-
-
 class API:
     """Client side methods for commonly used REST APIs."""
 
@@ -24,10 +22,11 @@ class API:
         log.debug('API options: %s', options)
 
     def _buildUrl(self, method: str = None) -> str:
+        log.debug('port %s', self._options.port)
         protocol = "https://" if self._options.secure else "http://"
-        url = f'{protocol}{self._options.host}:'
-        f'{self._options.port}{self._options.path}{self._options.key}'
-        f'/method'
+        url = f'{protocol}{self._options.host}:' \
+            f'{self._options.port}{self._options.path}{self._options.key}' \
+            f'/method'
         queryString = f'?ts={time.monotonic()}{random.random()}'
         url += queryString
         log.debug('built url: %s', url)
@@ -41,7 +40,7 @@ class API:
         async with aiohttp.ClientSession() as session:
             if method == HttpMethod.GET:
                 async with session.get(url) as response:
-                    return await response
+                    return response
             elif method == HttpMethod.POST:
                 async with session.post(url, data=body) as response:
                     return await response
@@ -59,7 +58,7 @@ class API:
                 raise ConnectionError(f'Error. Status:{response.status}')
             return response.text()
         except Exception as error:
-            log.error("Error retrieving ID: {}", error)
+            log.error("Error retrieving ID: %s", error)
             pathError = ""
             if self._options.path == "/" and \
                self._options.host != util.CLOUD_HOST:

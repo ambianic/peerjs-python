@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 peer = None
 myPeerId = None
 AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'
-AMBIANIC_PNP_PORT = 80
+AMBIANIC_PNP_PORT = 443
 AMBIANIC_PNP_SECURE = True
 time_start = None
 peerConnectionStatus = None
@@ -43,7 +43,7 @@ async def join_peer_room(peer=None):
     # first try to find the remote peer ID in the same room
     assert peer
     myRoom = PeerRoom(peer)
-    log.debug('Fetching room members', myRoom)
+    log.debug('Fetching room members %s', myRoom.id)
     peerIds = await myRoom.getRoomMembers()
     log.debug('myRoom members %r', peerIds)
 
@@ -140,7 +140,7 @@ async def pnp_service_connect() -> Peer:
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
     global myPeerId
-    log.info('pnpService: last saved myPeerId', myPeerId)
+    log.info('pnpService: last saved myPeerId %s', myPeerId)
     options = PeerOptions(
         host=AMBIANIC_PNP_HOST,
         port=AMBIANIC_PNP_PORT,
@@ -172,6 +172,20 @@ async def make_discoverable(peer=None):
     discoveryLoop = asyncio.create_task(periodic())
 
 
+def _config_logger():
+    logging.basicConfig(level=logging.WARNING)
+    format_cfg = '%(asctime)s %(levelname)-4s ' \
+        '%(pathname)s.%(funcName)s(%(lineno)d): %(message)s'
+    datefmt_cfg = '%Y-%m-%d %H:%M:%S'
+    fmt = logging.Formatter(fmt=format_cfg,
+                            datefmt=datefmt_cfg, style='%')
+    root_logger = logging.getLogger()
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(fmt)
+    root_logger.handlers = []
+    root_logger.addHandler(ch)
+
+
 if __name__ == "__main__":
     # args = None
     # parser = argparse.ArgumentParser(description="Data channels ping/pong")
@@ -180,7 +194,8 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    _config_logger()
+    # add formatter to ch
     log.debug('Log level set to debug')
     # signaling = create_signaling(args)
     # signaling = AmbianicPnpSignaling(args)

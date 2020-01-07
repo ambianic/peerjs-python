@@ -82,7 +82,7 @@ class Socket(AsyncIOEventEmitter):
         if (self._websocket or not self._disconnected):
             # socket already connected
             return
-        self._connect(wss_url=_ws_url)
+        await self._connect(wss_url=_ws_url)
         # ask asyncio to schedule a receiver soon
         # it will end when the socket closes
         self._receiver = asyncio.create_task(

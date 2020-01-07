@@ -22,7 +22,7 @@ class PeerRoom:
         self._api = API(self._peer.options)
 
     async def _restCall(self, http_method=None, rest_method=None):
-        log.debug('REST Call {} {}', http_method, rest_method)
+        log.debug('REST Call %s %s', http_method, rest_method)
         url = self._api._buildUrl(method=rest_method)
         response = None
         try:
@@ -36,6 +36,11 @@ class PeerRoom:
             if response is not None:
                 log.error(f'HTTP Response Status %s', response.status)
             raise ConnectionError(msg, error)
+
+    @property
+    def id(self):
+        """UUID of this room."""
+        return self._roomId
 
     async def _getRoomId(self):
         """Get this peer's current local Room ID from the signaling server."""

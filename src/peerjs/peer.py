@@ -157,7 +157,7 @@ class Peer(AsyncIOEventEmitter):
                 id = await self._api.retrieveId()
                 self._id = id
             except Exception as e:
-                self._abort(PeerErrorType.ServerError, e)
+                await self._abort(PeerErrorType.ServerError, e)
                 return
         await self.socket.start(self._id, self._options.token)
 
@@ -471,19 +471,18 @@ class Peer(AsyncIOEventEmitter):
         log.error("Aborting!")
         self.emitError(type, message)
         if not self._lastServerId:
-            self.destroy()
+            await self.destroy()
         else:
             self.disconnect()
 
     def emitError(self, type: PeerErrorType, err: str) -> None:
         """Emit a typed error message."""
-        log.error("Error:", err)
         if isinstance(err, str):
-            error = RuntimeError(err)
+            err = RuntimeError(err)
         else:
-            assert isinstance(error, RuntimeError)
-        error.type = type
-        self.emit(PeerEventType.Error, error)
+            assert isinstance(err, Exception)
+        err.type = type
+        self.emit(PeerEventType.Error, err)
 
     async def destroy(self) -> None:
         """Destroy Peer and close all active connections.
