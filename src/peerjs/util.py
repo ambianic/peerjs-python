@@ -1,9 +1,9 @@
 """Helper utility structures and methods."""
 import logging
 import math
-import random
 import re
 from dataclasses import dataclass
+from uuid import uuid4
 
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
@@ -115,9 +115,9 @@ class Util:
 
     def randomToken(self) -> str:
         """Generate a random token."""
-        token = f'{random.random()}'[2:]
+        token = str(uuid4())
         log.debug('Generated random token: %s', token)
-        return
+        return token
 
     def isSecure(self, url=None) -> bool:
         """Return True if using https for the signaling server connection."""

@@ -7,10 +7,18 @@ from typing import Any
 
 import aiohttp
 
-from .enums import HttpMethod
 from .util import util
 
 log = logging.getLogger(__name__)
+
+
+class HttpMethod:
+    """Http Request Method types."""
+
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
 
 
 class API:
@@ -33,9 +41,9 @@ class API:
         return url
 
     @staticmethod
-    async def fetch(url=None, method=None, body=None):
+    async def fetch(url=None, method='GET', body=None):
         """Similar to web browser JavaScript fetch."""
-        log.debug('fetching \n method: %s \n url: %s \n body: %s',
+        log.debug('fetching \n method: [%s] \n url: %s \n body: %s',
                   method,
                   url,
                   body)

@@ -47,7 +47,7 @@ class PeerOptions:
     port: int = util.CLOUD_PORT
     path: str = "/"
     key: str = PEER_DEFAULT_KEY
-    token: str = util.randomToken()
+    token: str = None
     config: Any = util.defaultConfig
     secure: bool = False
     pingInterval: int = 5  # ping to signaling server in seconds
@@ -88,6 +88,7 @@ class Peer(AsyncIOEventEmitter):
         """Create a peer instance."""
         super().__init__()
 
+        # Configure options
         self._options: PeerOptions = peer_options
         self._api: API = None
         self._socket: Socket = None
@@ -112,9 +113,6 @@ class Peer(AsyncIOEventEmitter):
 
         self._id = id
 
-        # Configure options
-        self._options = peer_options
-
         # Set path correctly.
         if self._options.path:
             if self._options.path[0] != "/":
@@ -122,7 +120,7 @@ class Peer(AsyncIOEventEmitter):
             if self._options.path[len(self._options.path) - 1] != "/":
                 self._options.path += "/"
 
-        self._api = API(peer_options)
+        self._api = API(self._options)
 
     async def start(self):
         """Activate Peer instance."""

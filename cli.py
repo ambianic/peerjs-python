@@ -7,10 +7,13 @@ import sys
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
 from peerjs.peerroom import PeerRoom
+from peerjs.util import util
 
 print(sys.version)
 
 log = logging.getLogger(__name__)
+
+LOG_LEVEL = logging.DEBUG
 
 peer = None
 myPeerId = None
@@ -43,7 +46,7 @@ async def join_peer_room(peer=None):
     # first try to find the remote peer ID in the same room
     assert peer
     myRoom = PeerRoom(peer)
-    log.info('Fetching room members %s', myRoom.id)
+    log.info('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
     log.info('myRoom members %r', peerIds)
 
@@ -135,21 +138,26 @@ async def pnp_service_connect() -> Peer:
         log.info('peer already connected')
         return
     # Create own peer object with connection to shared PeerJS server
-    log.info('pnpService: creating peer')
+    log.info('creating peer')
     # If we already have an assigned peerId, we will reuse it forever.
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
     global myPeerId
-    log.info('pnpService: last saved myPeerId %s', myPeerId)
+    log.info('last saved myPeerId %s', myPeerId)
+    new_token = util.randomToken()
+    log.info('Peer session token %s', new_token)
     options = PeerOptions(
         host=AMBIANIC_PNP_HOST,
         port=AMBIANIC_PNP_PORT,
-        secure=AMBIANIC_PNP_SECURE
+        secure=AMBIANIC_PNP_SECURE,
+        token=new_token
     )
     peer = Peer(id=myPeerId, peer_options=options)
-    log.info('pnpService: peer created')
+    log.info('pnpService: peer created with id %s , options: %r',
+             peer.id,
+             peer.options)
     await peer.start()
-    log.info('pnpService: peer activated')
+    log.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
     await make_discoverable(peer=peer)
 
@@ -162,10 +170,10 @@ async def make_discoverable(peer=None):
         try:
             await join_peer_room(peer=peer)
         except Exception as e:
-            log.warning('Unable to join room. '
-                        'Will retry in a few seconds. '
-                        'Error %r', e)
-        await asyncio.sleep(5)
+            log.exception('Unable to join room. '
+                          'Will retry in a few moments. '
+                          'Error %r', e)
+        await asyncio.sleep(30)
 
 
 def _config_logger():
@@ -177,7 +185,7 @@ def _config_logger():
     fmt = logging.Formatter(fmt=format_cfg,
                             datefmt=datefmt_cfg, style='%')
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
+    ch.setLevel(LOG_LEVEL)
     ch.setFormatter(fmt)
     root_logger.handlers = []
     root_logger.addHandler(ch)
