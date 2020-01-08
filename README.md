@@ -2,7 +2,7 @@
 
 Python port of [PeerJS](https://github.com/peers) client.
 
-Enables Web Apps to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
+Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
 
 Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
 
