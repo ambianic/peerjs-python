@@ -23,7 +23,7 @@ Other key goals:
 
 ## Project Status
 
-Early development stage. The initial focus is on p2p datachannel support. Contributions are welcome.
-  [x] Complete and test connectivity with signaling server (peerjs-server).
-  [ ] Complete and test connectivity with web app peers.
+Early development stage. The initial focus is on p2p datachannel support. Contributions are welcome.-
+-  [x] Complete and test connectivity with signaling server (peerjs-server).
+-  [ ] Complete and test connectivity with web app peers.
   
