@@ -2,7 +2,11 @@
 
 Python port of [PeerJS](https://github.com/peers) client.
 
-Enables Python apps to discover and pair with remote web apps running [PeerJS](https://github.com/peers/peerjs). Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
+Enables Web Apps to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
+
+Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
+
+![WebRTC logo](https://webrtc.org/assets/images/webrtc-logo-horiz-retro-300x60.png)
 
 ## Motivation
 
