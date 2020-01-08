@@ -1,22 +1,38 @@
 """Helper utility structures and methods."""
-from .supports import Supports
-from aiortc import RTCDataChannel, RTCPeerConnection
 import logging
 import math
-import asyncio
-import aiofiles
+import re
+from dataclasses import dataclass
+from uuid import uuid4
+
+from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
+
+# import asyncio
+# import aiofiles
 
 log = logging.getLogger(__name__)
 
-DEFAULT_CONFIG = {
-  'iceServers': [
-    {'urls': "stun:stun.l.google.com:19302"},
-    {'urls': "turn:0.peerjs.com:3478",
-     'username': "peerjs",
-     'credential': "peerjsp"}
-  ],
-  'sdpSemantics': "unified-plan"
-}
+DEFAULT_CONFIG = RTCConfiguration(
+    iceServers=[
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(urls=["turn:0.peerjs.com:3478"],
+                     username="peerjs",
+                     credential="peerjsp"
+                     )
+        ]
+    )
+
+
+@dataclass
+class UtilSupports:
+    """WebRTC parameters supported by this library."""
+
+    webRTC: bool = True
+    browser: str = 'aiortc'
+    audioVideo: bool = True
+    data: bool = True
+    binaryBlob: bool = False
+    reliable: bool = True
 
 
 class Util:
@@ -41,48 +57,21 @@ class Util:
         self.browser = "peerjs-python"  # Supports.getBrowser()
         self.browserVersion = "0.1"  # Supports.getVersion()
         # Lists which features are supported
-        self.supports = self._supported()
         # Binary stuff
         self._dataCount: int = 1
+        self._supports = UtilSupports()
 
-    def validateId(self, id: str) -> bool:
+    def validateId(self, id: str = None) -> bool:
         """Ensure alphanumeric ids."""
         # Allow empty ids
-        return not id or id.isalnum()
+        valid = not id or re.match('^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$', str)
+        log.debug('ID %s is %s valid', id, "" if valid else "not")
+        return valid
 
-    def _supported(self):
-        supported = {
-            'browser': Supports.isBrowserSupported(),
-            'webRTC': Supports.isWebRTCSupported(),
-            'audioVideo': False,
-            'data': False,
-            'binaryBlob': False,
-            'reliable': False,
-        }
-        if not supported.webRTC:
-            return supported
-        pc: RTCPeerConnection
-        try:
-            pc = RTCPeerConnection(DEFAULT_CONFIG)
-            supported.audioVideo = True
-            dc: RTCDataChannel
-            try:
-                dc = pc.createDataChannel("_PEERJSTEST", {'ordered': True})
-                supported.data = True
-                supported.reliable = True if dc.ordered else False
-                # Test for Binary mode support
-                try:
-                    dc.binaryType = "blob"
-                    supported.binaryBlob = not Supports.isIOS
-                except Exception:
-                    pass
-            finally:
-                if dc:
-                    dc.close()
-        finally:
-            if pc:
-                pc.close()
-        return supported
+    @property
+    def supports(self):
+        """Return dict of supported WebRTC features."""
+        return self._supports
 
     def chunk(self, blob):
         """Break up a blob into a list of smaller chunks for the wire."""
@@ -110,27 +99,27 @@ class Util:
         self._dataCount += 1
         return chunks
 
-    async def blobToArrayBuffer(self, blob=None, callback=None) -> None:
-        """Load a blog into an array buffer."""
-        # callback type hint: (arg: ArrayBuffer) -> None
-        async def load_file():
-            async with aiofiles.open(blob, mode='r') as f:
-                contents = await f.read()
-                callback(contents)
-        asyncio.create_task(load_file)
+    # async def blobToArrayBuffer(self, blob=None, callback=None) -> None:
+    #     """Load a blog into an array buffer."""
+    #     # callback type hint: (arg: ArrayBuffer) -> None
+    #     async def load_file():
+    #         async with aiofiles.open(blob, mode='r') as f:
+    #             contents = await f.read()
+    #             callback(contents)
+    #     asyncio.create_task(load_file)
 
-    def binaryStringToArrayBuffer(binary: str = None) -> bytes:
+    def binaryStringToArrayBuffer(self, binary: str = None) -> bytes:
         """Convert a string to an immutable byte array."""
         byteArray = binary.encode()
         return byteArray
 
-    def randomToken() -> str:
+    def randomToken(self) -> str:
         """Generate a random token."""
-        return math.random() \
-            .toString(36) \
-            .substr(2)
+        token = str(uuid4())
+        log.debug('Generated random token: %s', token)
+        return token
 
-    def isSecure(url=None) -> bool:
+    def isSecure(self, url=None) -> bool:
         """Return True if using https for the signaling server connection."""
         return url.startswith("https:")
 

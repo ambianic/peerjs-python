@@ -1,62 +1,56 @@
 """Python port of PeerJS client with built in signaling to PeerJS server."""
-from typing import List
-from pyee import AsyncIOEventEmitter, BaseEventEmitter
-import logging
-from .enums import \
-    ConnectionType, \
-    PeerErrorType, \
-    PeerEventType, \
-    SocketEventType, \
-    ServerMessageType
 # import json
 # import websockets
 # from websockets import WebSocket, ConnectionClosed
 import asyncio
-from .socket import Socket
-from .dataconnection import DataConnection
-from .baseconnection import BaseConnection
-from .servermessage import ServerMessage
+import logging
+from dataclasses import dataclass
+from typing import Any, List
+
+from pyee import AsyncIOEventEmitter, BaseEventEmitter
+
 from .api import API
+from .baseconnection import BaseConnection
+from .dataconnection import DataConnection
+from .enums import (
+    ConnectionType,
+    PeerErrorType,
+    PeerEventType,
+    ServerMessageType,
+    SocketEventType,
+)
+from .servermessage import ServerMessage
+from .socket import Socket
 from .util import util
 
 log = logging.getLogger(__name__)
 
 
+@dataclass
 class PeerConnectOption:
     """Peer connection configuration options."""
 
-    def __init__(self, **kwargs):
-        """Create a peer connection options instance."""
-        self.label: str = None
-        self.metadata = None
-        self.serialization: str = None
-        self.reliable: bool = None
+    label: str = None
+    metadata: Any = None
+    serialization: str = None
+    reliable: bool = None
 
 
+PEER_DEFAULT_KEY = "peerjs"
+
+
+@dataclass
 class PeerOptions:
     """Peer configuration options."""
 
-    def __init__(self, **kwargs):
-        """Create a peer options instance."""
-        self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
-        self.host: str = util.CLOUD_HOST
-        self.port: int = util.CLOUD_PORT
-        self.path: str = "/"
-        self.key: str = Peer.DEFAULT_KEY
-        self.token: str = util.randomToken()
-        self.config = util.defaultConfig
-        self.secure: bool = None
-        for k, v in kwargs:
-            setattr(self, k, v)
-
-
-# 0: None, 1: Errors, 2: Warnings, 3: All logs
-DEBUG_LEVELS = {
-    0: logging.CRITICAL,
-    1: logging.ERROR,
-    2: logging.WARNING,
-    3:  logging.DEBUG
-}
+    host: str = util.CLOUD_HOST
+    port: int = util.CLOUD_PORT
+    path: str = "/"
+    key: str = PEER_DEFAULT_KEY
+    token: str = None
+    config: Any = util.defaultConfig
+    secure: bool = False
+    pingInterval: int = 5  # ping to signaling server in seconds
 
 
 # def _object_from_string(message_str):
@@ -88,15 +82,16 @@ DEBUG_LEVELS = {
 class Peer(AsyncIOEventEmitter):
     """A peer that can initiate direct connections with other peers."""
 
-    def __init__(self, id: str = None, **options):
+    def __init__(self,
+                 id: str = None,
+                 peer_options: PeerOptions = None):
         """Create a peer instance."""
-        super()
+        super().__init__()
 
-        self._DEFAULT_KEY = "peerjs"
-
-        self._options: PeerOptions
-        self._api: API
-        self._socket: Socket
+        # Configure options
+        self._options: PeerOptions = peer_options
+        self._api: API = None
+        self._socket: Socket = None
 
         self._id: str = id
         self._lastServerId: str = None
@@ -118,25 +113,14 @@ class Peer(AsyncIOEventEmitter):
 
         self._id = id
 
-        # Configure options
-        self._options = PeerOptions(**options)
-
         # Set path correctly.
         if self._options.path:
             if self._options.path[0] != "/":
                 self._options.path = "/" + self._options.path
-            if self._options.path[self._options.path.length - 1] != "/":
+            if self._options.path[len(self._options.path) - 1] != "/":
                 self._options.path += "/"
 
-        self.debug: int = 0  # 1: Errors, 2: Warnings, 3: All logs
-
-        if 0 <= self._options.debug <= 3:
-            log.setLevel(DEBUG_LEVELS[self._options.debug])
-        else:
-            log.warning('Debug level option specified as {} '
-                        'which is outside the allowed 0-3 range.'
-                        'Setting to lowest log level: 0', self._options.debug)
-        self._api = API(**options)
+        self._api = API(self._options)
 
     async def start(self):
         """Activate Peer instance."""
@@ -153,9 +137,10 @@ class Peer(AsyncIOEventEmitter):
                 id = await self._api.retrieveId()
                 self._id = id
             except Exception as e:
-                self._abort(PeerErrorType.ServerError, e)
+                await self._abort(PeerErrorType.ServerError, e)
                 return
         await self.socket.start(self._id, self._options.token)
+        log.info('Peer started with UUID: %s', self._id)
 
     @property
     def id(self, ) -> None:
@@ -201,7 +186,6 @@ class Peer(AsyncIOEventEmitter):
         """Return True if peer is disconnected from signaling server."""
         return self._disconnected
 
-    @property
     def _createServerConnection(self) -> Socket:
         socket = Socket(
             self._options.secure,
@@ -468,21 +452,20 @@ class Peer(AsyncIOEventEmitter):
         log.error("Aborting!")
         self.emitError(type, message)
         if not self._lastServerId:
-            self.destroy()
+            await self.destroy()
         else:
             self.disconnect()
 
     def emitError(self, type: PeerErrorType, err: str) -> None:
         """Emit a typed error message."""
-        log.error("Error:", err)
         if isinstance(err, str):
-            error = RuntimeError(err)
+            err = RuntimeError(err)
         else:
-            assert isinstance(error, RuntimeError)
-        error.type = type
-        self.emit(PeerEventType.Error, error)
+            assert isinstance(err, Exception)
+        err.type = type
+        self.emit(PeerEventType.Error, err)
 
-    def destroy(self) -> None:
+    async def destroy(self) -> None:
         """Destroy Peer and close all active connections.
 
         Close all active peer connections and the active server connection.
@@ -493,7 +476,7 @@ class Peer(AsyncIOEventEmitter):
         if self.destroyed:
             return
         log.debug(f'Destroy peer with ID:${self.id}')
-        self.disconnect()
+        await self.disconnect()
         self._cleanup()
         self._destroyed = True
         self.emit(PeerEventType.Close)
@@ -513,7 +496,7 @@ class Peer(AsyncIOEventEmitter):
         for connection in connections:
             connection.close()
 
-    def disconnect(self) -> None:
+    async def disconnect(self) -> None:
         """Disconnects the Peer's connection to the PeerServer.
 
         Does not close any active connections.
@@ -527,7 +510,8 @@ class Peer(AsyncIOEventEmitter):
         log.debug(f'Disconnect peer with ID:${currentId}')
         self._disconnected = True
         self._open = False
-        self.socket.close()
+        if (self.socket is not None):
+            await self.socket.close()
         self._lastServerId = currentId
         self._id = None
         self.emit(PeerEventType.Disconnected, currentId)

@@ -1,15 +1,15 @@
 """Constructs for managing negotiations between Peers."""
-from util import util
+from .util import util
 from pyee import BaseEventEmitter
 import logging
 # import { MediaConnection } from "./mediaconnection";
-from .dataconnection import DataConnection
-from enums import \
+from .enums import \
     ConnectionType, \
     PeerErrorType, \
     ConnectionEventType, \
     ServerMessageType
 from .baseconnection import BaseConnection
+# from .dataconnection import DataConnection
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 
 log = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class Negotiator:
         if options.originator:
             # originate connection offer
             if self.connection.type == ConnectionType.Data:
-                dataConnection: DataConnection = self.connection
+                dataConnection: DataConnection = self.connection  # NOQA
                 # Pass RTCDataChannelInit dictionary
                 # https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createDataChannel#RTCDataChannelInit_dictionary
                 config = {'ordered': options.reliable}
@@ -172,7 +172,7 @@ class Negotiator:
         peerConnectionNotClosed = peerConnection.signalingState != "closed"
         dataChannelNotClosed = False
         if self.connection.type == ConnectionType.Data:
-            dataConnection: DataConnection = self.connection
+            dataConnection: DataConnection = self.connection  # NOQA
             dataChannel = dataConnection.dataChannel
             if dataChannel:
                 dataChannelNotClosed = dataChannel.readyState and \

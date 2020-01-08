@@ -2,16 +2,23 @@
 # import argparse
 import asyncio
 import logging
-from peerjs.peerroom import PeerRoom
+import sys
+
 # from aiortc import RTCIceCandidate, RTCSessionDescription
-from peerjs.peer import Peer
+from peerjs.peer import Peer, PeerOptions
+from peerjs.peerroom import PeerRoom
+from peerjs.util import util
+
+print(sys.version)
 
 log = logging.getLogger(__name__)
+
+LOG_LEVEL = logging.DEBUG
 
 peer = None
 myPeerId = None
 AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'
-AMBIANIC_PNP_PORT = 80
+AMBIANIC_PNP_PORT = 443
 AMBIANIC_PNP_SECURE = True
 time_start = None
 peerConnectionStatus = None
@@ -39,9 +46,9 @@ async def join_peer_room(peer=None):
     # first try to find the remote peer ID in the same room
     assert peer
     myRoom = PeerRoom(peer)
-    log.debug('Fetching room members', myRoom)
+    log.info('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
-    log.debug('myRoom members %r', peerIds)
+    log.info('myRoom members %r', peerIds)
 
 
 def _setPnPServiceConnectionHandlers(peer=None):
@@ -131,40 +138,57 @@ async def pnp_service_connect() -> Peer:
         log.info('peer already connected')
         return
     # Create own peer object with connection to shared PeerJS server
-    log.info('pnpService: creating peer')
+    log.info('creating peer')
     # If we already have an assigned peerId, we will reuse it forever.
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
     global myPeerId
-    log.info('pnpService: last saved myPeerId', myPeerId)
-    peer = Peer(myPeerId, {
-      'host': AMBIANIC_PNP_HOST,
-      'port': AMBIANIC_PNP_PORT,
-      'secure': AMBIANIC_PNP_SECURE,
-      'debug': 2
-      })
-    log.info('pnpService: peer created')
+    log.info('last saved myPeerId %s', myPeerId)
+    new_token = util.randomToken()
+    log.info('Peer session token %s', new_token)
+    options = PeerOptions(
+        host=AMBIANIC_PNP_HOST,
+        port=AMBIANIC_PNP_PORT,
+        secure=AMBIANIC_PNP_SECURE,
+        token=new_token
+    )
+    peer = Peer(id=myPeerId, peer_options=options)
+    log.info('pnpService: peer created with id %s , options: %r',
+             peer.id,
+             peer.options)
     await peer.start()
-    log.info('pnpService: peer activated')
+    log.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
-    make_discoverable(peer=peer)
-    return peer
+    await make_discoverable(peer=peer)
 
 
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
     assert peer
+    while True:
+        log.info('Making peer discoverable.')
+        try:
+            await join_peer_room(peer=peer)
+        except Exception as e:
+            log.exception('Unable to join room. '
+                          'Will retry in a few moments. '
+                          'Error %r', e)
+        await asyncio.sleep(30)
 
-    async def periodic():
-        while True:
-            log.info('Making peer discoverable.')
-            join_peer_room(peer=peer)
-            await asyncio.sleep(5)
 
-    def stop():
-        discoveryLoop.cancel()
-
-    discoveryLoop = asyncio.create_task(periodic())
+def _config_logger():
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    format_cfg = '%(asctime)s %(levelname)-4s ' \
+        '%(pathname)s.%(funcName)s(%(lineno)d): %(message)s'
+    datefmt_cfg = '%Y-%m-%d %H:%M:%S'
+    fmt = logging.Formatter(fmt=format_cfg,
+                            datefmt=datefmt_cfg, style='%')
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(LOG_LEVEL)
+    ch.setFormatter(fmt)
+    root_logger.handlers = []
+    root_logger.addHandler(ch)
 
 
 if __name__ == "__main__":
@@ -175,7 +199,9 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
-    logging.basicConfig(level=logging.DEBUG)
+    _config_logger()
+    # add formatter to ch
+    log.debug('Log level set to debug')
     # signaling = create_signaling(args)
     # signaling = AmbianicPnpSignaling(args)
     # pc = RTCPeerConnection()
@@ -192,6 +218,7 @@ if __name__ == "__main__":
         log.info('KeyboardInterrupt detected. Exiting...')
         pass
     finally:
-        loop.run_until_complete(peer.destroy())
+        if peer:
+            loop.run_until_complete(peer.destroy())
         # loop.run_until_complete(pc.close())
         # loop.run_until_complete(signaling.close())

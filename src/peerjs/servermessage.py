@@ -1,12 +1,17 @@
 """Wrapper fro messages from a signaling server."""
-from enums import ServerMessageType
+from dataclasses import dataclass
+from typing import Any, Optional
+
+from dataclasses_json import dataclass_json
+
+from .enums import ServerMessageType
 
 
+@dataclass_json
+@dataclass
 class ServerMessage:
-    """Wrapper fro messages from a signaling server."""
+    """Wrapper for messages from the signaling server."""
 
-    def __init__(self):
-        """Create server message constructs."""
-        self.type: ServerMessageType = None
-        self.payload = None
-        self.src: str = None
+    type: ServerMessageType = None
+    payload: Optional[Any] = None
+    src: Optional[str] = None

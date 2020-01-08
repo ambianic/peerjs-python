@@ -15,16 +15,6 @@ class ConnectionEventType(Enum):
 
 
 @unique
-class HttpMethod(Enum):
-    """Http Request Method types."""
-
-    GET = "GET"
-    POST = "POST"
-    PUT = "PUT"
-    DELETE = "DELETE"
-
-
-@unique
 class ConnectionType(Enum):
     """Connection type."""
 
