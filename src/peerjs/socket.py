@@ -42,7 +42,7 @@ class Socket(AsyncIOEventEmitter):
         """Connect to WebSockets server."""
         assert wss_url
         # connect to websocket
-        websocket = await websockets.connect(wss_url, ssl=True)
+        websocket = await websockets.connect(wss_url, ping_interval=5)
         self._sendQueuedMessages()
         log.debug("WebSockets open")
         await websocket.send(

@@ -17,9 +17,9 @@ LOG_LEVEL = logging.DEBUG
 
 peer = None
 myPeerId = None
-AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'
-AMBIANIC_PNP_PORT = 443
-AMBIANIC_PNP_SECURE = True
+AMBIANIC_PNP_HOST = 'localhost'  # 'ambianic-pnp.herokuapp.com'
+AMBIANIC_PNP_PORT = 9779  # 443
+AMBIANIC_PNP_SECURE = False  # True
 time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
@@ -44,7 +44,6 @@ discoveryLoop = None
 async def join_peer_room(peer=None):
     """Join a peer room with other local peers."""
     # first try to find the remote peer ID in the same room
-    assert peer
     myRoom = PeerRoom(peer)
     log.info('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
@@ -168,7 +167,15 @@ async def make_discoverable(peer=None):
     while True:
         log.info('Making peer discoverable.')
         try:
-            await join_peer_room(peer=peer)
+            # check if the websocket connection
+            # to the signaling server is alive
+            if peer.open:
+                await join_peer_room(peer=peer)
+            else:
+                log.info('Peer not connected to signaling server. '
+                         'Will retry in a bit.')
+                if peer.disconnected:
+                    await peer.reconnect()
         except Exception as e:
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '

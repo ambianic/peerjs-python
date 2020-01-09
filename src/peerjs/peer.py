@@ -204,11 +204,11 @@ class Peer(AsyncIOEventEmitter):
             self._abort(PeerErrorType.SocketError, error)
 
         @socket.on(SocketEventType.Disconnected)
-        def on_disconnected():
+        async def on_disconnected():
             if self.disconnected:
                 return
             self.emitError(PeerErrorType.Network, "Lost connection to server.")
-            self.disconnect()
+            await self.disconnect()
 
         @socket.on(SocketEventType.Close)
         def on_close():
@@ -516,13 +516,14 @@ class Peer(AsyncIOEventEmitter):
         self._id = None
         self.emit(PeerEventType.Disconnected, currentId)
 
-    def reconnect(self) -> None:
+    async def reconnect(self) -> None:
         """Attempt to reconnect with the same ID."""
         if self.disconnected and not self.destroyed:
             log.debug("Attempting reconnection "
                       f"to server with ID {self._lastServerId}")
             self._disconnected = False
-            self._initialize(self._lastServerId)
+            self._id = self._lastServerId
+            await self.start()
         elif self.destroyed:
             raise RuntimeError("This peer cannot reconnect to the server. "
                                "It has already been destroyed.")
