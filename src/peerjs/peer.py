@@ -224,6 +224,10 @@ class Peer(AsyncIOEventEmitter):
         peerId = message.src
         payload = message.payload
 
+        # log.info('Handling server message type %s, '
+        #         'source peer/client id %s, payload %s',
+        #         type, peerId, payload)
+
         server_messenger = BaseEventEmitter()
 
         # The connection to the server is open.
@@ -231,6 +235,7 @@ class Peer(AsyncIOEventEmitter):
         def _on_server_open(peerId=None, payload=None):
             self._lastServerId = self.id
             self._open = True
+            log.debug('Signaling server connection open.')
             self.emit(PeerEventType.Open, self.id)
 
         # Server error.
@@ -279,7 +284,7 @@ class Peer(AsyncIOEventEmitter):
                 log.warn(f'You received a malformed message '
                          f'from ${peerId} of type ${type}')
                 return
-            connectionId = payload.connectionId
+            connectionId = payload['connectionId']
             connection = self.getConnection(peerId, connectionId)
             if connection and connection.peerConnection:
                 # Pass it on.
@@ -294,7 +299,9 @@ class Peer(AsyncIOEventEmitter):
         """Handle remote peer offer for a direct connection."""
         # we should consider switching this to CALL/CONNECT,
         # but this is the least breaking option.
-        connectionId = payload.connectionId
+        log.info("Remote peer id %s offering connection. Payload %s",
+                 peerId, payload)
+        connectionId = payload['connectionId']
         connection = self.getConnection(peerId, connectionId)
 
         if (connection):
@@ -303,7 +310,7 @@ class Peer(AsyncIOEventEmitter):
                         f'existing Connection ID:${connectionId}')
 
         # Create a new connection.
-        if payload.type == ConnectionType.Media:
+        if payload['type'] == ConnectionType.Media:
             pass
         # MediaConnection not supported in the Python port of PeerJS yet.
         #       Contributions welcome!
@@ -314,20 +321,22 @@ class Peer(AsyncIOEventEmitter):
         #   });
         #   this._addConnection(peerId, connection);
         #   this.emit(PeerEventType.Call, connection);
-        elif payload.type == ConnectionType.Data:
+        elif payload['type'] == ConnectionType.Data:
             connection = DataConnection(
-                peerId,
-                self,
+                peerId=peerId,
+                provider=self,
                 connectionId=connectionId,
+                label=payload['label'],
+                serialization=payload['serialization'],
+                reliable=payload['reliable'],
                 _payload=payload,
-                metadata=payload.metadata,
-                label=payload.label,
-                serialization=payload.serialization,
-                reliable=payload.reliable)
+                metadata=payload.get('metadata', None)
+                )
             self._addConnection(peerId, connection)
             self.emit(PeerEventType.Connection, connection)
         else:
-            log.warning(f'Received malformed connection type:${payload.type}')
+            log.warning('Received malformed connection type: %s',
+                        payload["type"])
             return
 
         # Retrieved pending messages from the server for remote peers.

@@ -1,18 +1,22 @@
 """Convenience wrapper around RTCDataChannel."""
-from .util import util
-import logging
-from .negotiator import Negotiator
-from .enums import \
-  ConnectionType, \
-  ConnectionEventType, \
-  SerializationType, \
-  ServerMessageType
-from .baseconnection import BaseConnection
-from .servermessage import ServerMessage
+import asyncio
 # from .encodingqueue import EncodingQueue
 import json
+import logging
+from typing import Any
+
 from aiortc import RTCDataChannel
-import asyncio
+
+from .baseconnection import BaseConnection
+from .enums import (
+    ConnectionEventType,
+    ConnectionType,
+    SerializationType,
+    ServerMessageType,
+)
+from .negotiator import Negotiator
+from .servermessage import ServerMessage
+from .util import util
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +41,18 @@ class DataConnection(BaseConnection):
         """Return current data buffer size."""
         return self._bufferSize
 
-    def __init__(self, peerId: str = None, provider=None, **options):
+    def __init__(self,
+                 peerId: str = None,
+                 provider=None,  # provider: Peer
+                 connectionId: str = None,
+                 label: str = None,
+                 serialization: str = None,
+                 reliable: bool = None,
+                 _payload: Any = None,
+                 **options):
         """Create a DataConnection instance."""
-        super(peerId, provider, options)
+        super().__init__(peerId, provider, options)
+        self.peerId = peerId
         self._negotiator: Negotiator = None
         self.label: str = None
         self.serialization: SerializationType = None
@@ -60,29 +73,24 @@ class DataConnection(BaseConnection):
 
         self._dc: RTCDataChannel
         # self._encodingQueue = EncodingQueue()
-        if options.connectionId:
-            self.connectionId = options.connectionId
-        else:
-            self.connectionId = DataConnection.ID_PREFIX + util.randomToken()
-        if options.label:
-            self.label = options.label
-        else:
-            self.label = self.connectionId
-        self.serialization = options.serialization if \
-            options.serialization else SerializationType.Binary
-        self.reliable = self.options.reliable
-        @self._encodingQueue.on('done')
-        def on_eq_done(ab):  # ab : ArrayBuffer
-            self._bufferedSend(ab)
-
-        @self._encodingQueue.on('error')
-        def on_eq_error():
-            log.error(f'DC#${self.connectionId}: '
-                      'Error occured in encoding from blob to arraybuffer, '
-                      'closing Data Connection.')
-            self.close()
+        self.connectionId = \
+            connectionId or \
+            DataConnection.ID_PREFIX + util.randomToken()
+        self.label = label or self.connectionId
+        self.serialization = serialization or SerializationType.Binary
+        self.reliable = reliable
+        # @self._encodingQueue.on('done')
+        # def on_eq_done(ab):  # ab : ArrayBuffer
+        #     self._bufferedSend(ab)
+        #
+        # @self._encodingQueue.on('error')
+        # def on_eq_error():
+        #     log.error(f'DC#${self.connectionId}: '
+        #               'Error occured in encoding from blob to arraybuffer, '
+        #               'closing Data Connection.')
+        #     self.close()
         self._negotiator = Negotiator(self)
-        payload_option = options._payload or {'originator': True}
+        payload_option = _payload or {'originator': True}
         self._negotiator.startConnection(payload_option)
 
     def initialize(self, dc: RTCDataChannel) -> None:

@@ -24,11 +24,15 @@ class BaseConnection(AsyncIOEventEmitter):
         self,
         peer: str = None,
         provider=None,  # provider: Peer
-        options: any = None
+        metadata=None,
+        **options
          ):
         """Create connection construct."""
         super().__init__()
-        self.metadata = options.metadata
+        self.peer = peer
+        self.provider = provider
+        self.metadata = metadata
+        self.options = options
         self._open = False
         self.connectionId: str = None
         self.peerConnection: RTCPeerConnection = None

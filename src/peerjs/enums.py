@@ -14,8 +14,7 @@ class ConnectionEventType(Enum):
     IceStateChanged = "iceStateChanged"
 
 
-@unique
-class ConnectionType(Enum):
+class ConnectionType:
     """Connection type."""
 
     Data = "data"

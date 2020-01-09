@@ -61,8 +61,8 @@ class Socket(AsyncIOEventEmitter):
                     log.info("Server message received: %s", data)
                     self.emit(SocketEventType.Message, data)
                 except Exception as e:
-                    log.warning("Invalid server message: {}, error {}",
-                                message, e)
+                    log.exception("Invalid server message: %s, error %s",
+                                  message, e)
                 self.emit('message', message)
         except ConnectionClosedError as err:
             log.warning("Websocket connection closed with error. %s", err)
