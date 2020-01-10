@@ -28,7 +28,7 @@ class DataConnection(BaseConnection):
     MAX_BUFFERED_AMOUNT = 8 * 1024 * 1024
 
     @property
-    def type():
+    def type(self):
         """Return ConnectionType.Data."""
         return ConnectionType.Data
 
@@ -90,8 +90,16 @@ class DataConnection(BaseConnection):
         #               'closing Data Connection.')
         #     self.close()
         self._negotiator = Negotiator(self)
-        payload_option = _payload or {'originator': True}
-        self._negotiator.startConnection(payload_option)
+        self._payload = _payload
+
+    async def start(self):
+        """Start data connection negotiation."""
+        payload_option = self._payload or {'originator': True}
+        log.info('Starting new connection with payload: %r '
+                 'and payload_option: %r',
+                 self._payload,
+                 payload_option)
+        await self._negotiator.startConnection(payload_option)
 
     def initialize(self, dc: RTCDataChannel) -> None:
         """Configure datachannel when available.

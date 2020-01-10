@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, List
 
-from pyee import AsyncIOEventEmitter, BaseEventEmitter
+from pyee import AsyncIOEventEmitter
 
 from .api import API
 from .baseconnection import BaseConnection
@@ -228,7 +228,7 @@ class Peer(AsyncIOEventEmitter):
         #         'source peer/client id %s, payload %s',
         #         type, peerId, payload)
 
-        server_messenger = BaseEventEmitter()
+        server_messenger = AsyncIOEventEmitter()
 
         # The connection to the server is open.
         @server_messenger.once(ServerMessageType.Open)
@@ -270,13 +270,13 @@ class Peer(AsyncIOEventEmitter):
 
         # Server relaying offer for a direct connection from a remote peer
         @server_messenger.once(ServerMessageType.Offer)
-        def _on_server_offer():
-            self._handle_offer(peerId, payload)
+        async def _on_server_offer():
+            await self._handle_offer(peerId, payload)
 
         # Something went wrong during emit message handling
         @server_messenger.once('error')
         def on_error(error_message):
-            log.warning('Error on server message emit: {}', message)
+            log.warning('Error on server message emit: %r', error_message)
 
         is_handled = server_messenger.emit(type)
         if not is_handled:
@@ -295,7 +295,7 @@ class Peer(AsyncIOEventEmitter):
             else:
                 log.warn("You received an unrecognized message:", message)
 
-    def _handle_offer(self, peerId=None, payload=None):
+    async def _handle_offer(self, peerId=None, payload=None):
         """Handle remote peer offer for a direct connection."""
         # we should consider switching this to CALL/CONNECT,
         # but this is the least breaking option.
@@ -332,6 +332,7 @@ class Peer(AsyncIOEventEmitter):
                 _payload=payload,
                 metadata=payload.get('metadata', None)
                 )
+            await connection.start()
             self._addConnection(peerId, connection)
             self.emit(PeerEventType.Connection, connection)
         else:
@@ -357,7 +358,7 @@ class Peer(AsyncIOEventEmitter):
         messages = self._lostMessages.pop(connectionId, [])
         return messages
 
-    def connect(self,
+    async def connect(self,
                 peer: str,
                 options: PeerConnectOption = {}) -> DataConnection:
         """Return a DataConnection to the specified remote peer.
@@ -380,6 +381,7 @@ class Peer(AsyncIOEventEmitter):
             return
 
         dataConnection = DataConnection(peer, self, options)
+        await dataConnection.start()
         self._addConnection(peer, dataConnection)
         return dataConnection
 
@@ -425,14 +427,19 @@ class Peer(AsyncIOEventEmitter):
         """Add a data/media connection to this peer."""
         log.debug(f"add connection ${connection.type}:"
                   f"${connection.connectionId} to peerId:${peerId}")
-        if not self._connections.has(peerId):
-            self._connections.set(peerId, [])
-        self._connections.get(peerId).push(connection)
+        if not peerId in self._connections:
+            self._connections[peerId] = []
+        self._connections[peerId].append(connection)
 
     def _removeConnection(self, connection: BaseConnection) -> None:
         connections = self._connections.get(connection.peer, None)
         if connections:
-            connections.pop(connection, None)
+            try:
+                connections.remove(connection)
+            except ValueError as err:
+                log.warning('Error removing connection peer id %s. '
+                            'Connection not found in managed connections list.',
+                            connection.peer)
         # remove from lost messages
         self._lostMessages.pop(connection.connectionId, None)
 

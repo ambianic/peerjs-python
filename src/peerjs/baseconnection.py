@@ -11,9 +11,10 @@ from .servermessage import ServerMessage
 class BaseConnection(AsyncIOEventEmitter):
     """Base abstract class for peer to peer connections."""
 
-    @abstractmethod
+    @property
     def type() -> ConnectionType:
         """Return connection type."""
+        return None
 
     @property
     def open(self):

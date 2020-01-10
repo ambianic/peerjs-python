@@ -1,16 +1,14 @@
 """Constructs for managing negotiations between Peers."""
-from .util import util
-from pyee import BaseEventEmitter
 import logging
-# import { MediaConnection } from "./mediaconnection";
-from .enums import \
-    ConnectionType, \
-    PeerErrorType, \
-    ConnectionEventType, \
-    ServerMessageType
-from .baseconnection import BaseConnection
+
 # from .dataconnection import DataConnection
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+from pyee import BaseEventEmitter
+
+from .baseconnection import BaseConnection
+# import { MediaConnection } from "./mediaconnection";
+from .enums import ConnectionEventType, ConnectionType, PeerErrorType, ServerMessageType
+from .util import util
 
 log = logging.getLogger(__name__)
 
@@ -20,30 +18,36 @@ class Negotiator:
 
     def __init__(self, connection: BaseConnection = None):
         """Create negotiator."""
+        self.connection = connection
 
-    def startConnection(self, options=None) -> RTCPeerConnection:
+    async def startConnection(self,
+                        originator=None,
+                        sdp=None,
+                        _stream=None,
+                        reliable=None,
+                        **options) -> RTCPeerConnection:
         """Return a PeerConnection object setup correctly for data or media."""
         peerConnection = self._startPeerConnection()
         # Set the connection wrapper's RTCPeerConnection.
         self.connection.peerConnection = peerConnection
-        if self.connection.type == ConnectionType.Media and options._stream:
-            self._addTracksToConnection(options._stream, peerConnection)
+        if self.connection.type == ConnectionType.Media and _stream:
+            self._addTracksToConnection(_stream, peerConnection)
         # What do we need to do now?
-        if options.originator:
+        if originator:
             # originate connection offer
             if self.connection.type == ConnectionType.Data:
                 dataConnection: DataConnection = self.connection  # NOQA
                 # Pass RTCDataChannelInit dictionary
                 # https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createDataChannel#RTCDataChannelInit_dictionary
-                config = {'ordered': options.reliable}
+                log.info('creating datachannel with label=%s and ordered=%s',
+                         dataConnection.label, reliable)
                 dataChannel = peerConnection.createDataChannel(
-                    dataConnection.label,
-                    config)
+                    dataConnection.label, ordered=reliable)
                 dataConnection.initialize(dataChannel)
-            self._makeOffer()
+            await self._makeOffer()
         else:
             # receive connection offer originated by remote peer
-            self.handleSDP("OFFER", options.sdp)
+            self.handleSDP("OFFER", sdp)
 
     def _startPeerConnection(self) -> RTCPeerConnection:
         """Start a Peer Connection."""
