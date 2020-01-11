@@ -3,6 +3,7 @@ import logging
 
 # from .dataconnection import DataConnection
 from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from pyee import BaseEventEmitter
 
 from .baseconnection import BaseConnection
@@ -20,12 +21,13 @@ class Negotiator:
         """Create negotiator."""
         self.connection = connection
 
-    async def startConnection(self,
-                        originator=None,
-                        sdp=None,
-                        _stream=None,
-                        reliable=None,
-                        **options) -> RTCPeerConnection:
+    async def startConnection(
+            self,
+            originator=None,
+            sdp=None,
+            _stream=None,
+            reliable=None,
+            **options) -> RTCPeerConnection:
         """Return a PeerConnection object setup correctly for data or media."""
         peerConnection = self._startPeerConnection()
         # Set the connection wrapper's RTCPeerConnection.
@@ -47,7 +49,7 @@ class Negotiator:
             await self._makeOffer()
         else:
             # receive connection offer originated by remote peer
-            self.handleSDP("OFFER", sdp)
+            await self.handleSDP("OFFER", sdp)
 
     def _startPeerConnection(self) -> RTCPeerConnection:
         """Start a Peer Connection."""
@@ -91,7 +93,7 @@ class Negotiator:
             state_change = BaseEventEmitter()
             @state_change.once("failed")
             def on_failed():
-                log.debug(
+                log.info(
                     f"iceConnectionState is failed, "
                     "closing connections to {peerId}"
                     )
@@ -104,7 +106,7 @@ class Negotiator:
 
             @state_change.once("closed")
             def on_closed():
-                log.debug(
+                log.info(
                     "iceConnectionState is closed, "
                     f"closing connections to {peerId}"
                     )
@@ -116,7 +118,7 @@ class Negotiator:
 
             @state_change.once("disconnected")
             def on_disconnected():
-                log.debug(
+                log.info(
                     "iceConnectionState is disconnected, "
                     f"closing connections to {peerId}"
                     )
@@ -128,6 +130,10 @@ class Negotiator:
 
             @state_change.once("completed")
             def on_completed():
+                log.info(
+                    'iceConnectionState completed for peer id %s',
+                    peerId
+                    )
                 # this function needs to be implemented as in PeerJS
                 # https://github.com/peers/peerjs/blob/5e36ba17be02a9af7c171399f7737d8ccb38fbbe/lib/negotiator.ts#L119
                 # when the "icecandidate"
@@ -148,7 +154,7 @@ class Negotiator:
         # in the options hash.
         @peerConnection.on("datachannel")
         def peerconn_ondatachanel(evt):
-            log.debug("Received data channel.")
+            log.info("Received data channel.")
             dataChannel = evt.channel
             connection = provider.getConnection(peerId, connectionId)
             connection.initialize(dataChannel)
@@ -157,7 +163,7 @@ class Negotiator:
         log.debug("Listening for remote stream.")
         @peerConnection.on("track")
         def peerconn_ontrack(evt):
-            log.debug("Received remote stream.")
+            log.info("Received remote stream.")
             stream = evt.streams[0]
             connection = provider.getConnection(peerId, connectionId)
             if connection.type == ConnectionType.Media:
@@ -190,7 +196,7 @@ class Negotiator:
         try:
             offer = await peerConnection.createOffer(
                 self.connection.options.constraints)
-            log.debug("Created offer.")
+            log.info("Created offer.")
 
             if self.connection.options.sdpTransform and \
                callable(self.connection.options.sdpTransform):
@@ -199,8 +205,8 @@ class Negotiator:
                     offer.sdp = tSDP
             try:
                 await peerConnection.setLocalDescription(offer)
-                log.debug(f"Set localDescription:{offer} "
-                          f"for: {self.connection.peer}")
+                log.info(f"Set localDescription:{offer} "
+                         f"for: {self.connection.peer}")
                 payload = {
                     'sdp': offer,
                     'type': self.connection.type,
@@ -282,23 +288,25 @@ class Negotiator:
     async def handleCandidate(self, ice=None):
         """Handle new peer candidate."""
         log.debug(f'handleCandidate:', ice)
-        candidate = ice.candidate
-        sdpMLineIndex = ice.sdpMLineIndex
-        sdpMid = ice.sdpMid
+        candidate = ice['candidate']
+        sdpMLineIndex = ice['sdpMLineIndex']
+        sdpMid = ice['sdpMid']
         peerConnection = self.connection.peerConnection
         provider = self.connection.provider
         try:
-            await peerConnection.addIceCandidate(
-                RTCIceCandidate({
-                    'sdpMid': sdpMid,
-                    'sdpMLineIndex': sdpMLineIndex,
-                    'candidate': candidate
-                    })
-                )
-            log.debug(f'Added ICE candidate for:{self.connection.peer}')
+            log.info('Adding ICE candidate for peer id %s',
+                     self.connection.peer)
+            rtc_ice_candidate = candidate_from_sdp(candidate)
+            rtc_ice_candidate.sdpMid = sdpMid
+            rtc_ice_candidate.sdpMLineIndex = sdpMLineIndex
+            log.info('RTCIceCandidate: %r', rtc_ice_candidate)
+            log.info('peerConnection: %r', peerConnection)
+            peerConnection.addIceCandidate(rtc_ice_candidate)
+            log.info('Added ICE candidate for peer %s',
+                     self.connection.peer)
         except Exception as err:
             provider.emitError(PeerErrorType.WebRTC, err)
-            log.debug("Failed to handleCandidate, ", err)
+            log.exception("Failed to handleCandidate, ", err)
 
     def _addTracksToConnection(
          stream,  #: MediaStream

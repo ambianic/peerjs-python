@@ -53,32 +53,6 @@ class PeerOptions:
     pingInterval: int = 5  # ping to signaling server in seconds
 
 
-# def _object_from_string(message_str):
-#     message = json.loads(message_str)
-#     if message["type"] in ["answer", "offer"]:
-#         return RTCSessionDescription(**message)
-#     elif message["type"] == "candidate":
-#         candidate = candidate_from_sdp(message["candidate"].split(":", 1)[1])
-#         candidate.sdpMid = message["id"]
-#         candidate.sdpMLineIndex = message["label"]
-#         return candidate
-#
-#
-# def _object_to_string(obj):
-#     if isinstance(obj, RTCSessionDescription):
-#         message = {"sdp": obj.sdp, "type": obj.type}
-#     elif isinstance(obj, RTCIceCandidate):
-#         message = {
-#             "candidate": "candidate:" + candidate_to_sdp(obj),
-#             "id": obj.sdpMid,
-#             "label": obj.sdpMLineIndex,
-#             "type": "candidate",
-#         }
-#     else:
-#         message = {"type": "bye"}
-#     return json.dumps(message, sort_keys=True)
-
-
 class Peer(AsyncIOEventEmitter):
     """A peer that can initiate direct connections with other peers."""
 
@@ -196,12 +170,12 @@ class Peer(AsyncIOEventEmitter):
             self._options.pingInterval)
 
         @socket.on(SocketEventType.Message)
-        def on_message(data: ServerMessage):
-            self._handleMessage(data)
+        async def on_message(data: ServerMessage):
+            await self._handleMessage(data)
 
         @socket.on(SocketEventType.Error)
-        def on_error(error: str):
-            self._abort(PeerErrorType.SocketError, error)
+        async def on_error(error: str):
+            await self._abort(PeerErrorType.SocketError, error)
 
         @socket.on(SocketEventType.Disconnected)
         async def on_disconnected():
@@ -211,14 +185,14 @@ class Peer(AsyncIOEventEmitter):
             await self.disconnect()
 
         @socket.on(SocketEventType.Close)
-        def on_close():
+        async def on_close():
             if self.disconnected:
-                self._abort(PeerErrorType.SocketClosed,
-                            "Underlying socket is already closed.")
+                await self._abort(PeerErrorType.SocketClosed,
+                                  "Underlying socket is already closed.")
 
         return socket
 
-    def _handleMessage(self, message: ServerMessage) -> None:
+    async def _handleMessage(self, message: ServerMessage) -> None:
         """Handle messages from the server."""
         type = message.type
         peerId = message.src
@@ -240,20 +214,20 @@ class Peer(AsyncIOEventEmitter):
 
         # Server error.
         @server_messenger.once(ServerMessageType.Error)
-        def _on_server_error(peerId=None, payload=None):
-            self._abort(PeerErrorType.ServerError, payload.msg)
+        async def _on_server_error(peerId=None, payload=None):
+            await self._abort(PeerErrorType.ServerError, payload.msg)
 
         # The selected ID is taken.
         @server_messenger.once(ServerMessageType.IdTaken)
-        def _on_server_idtaken(peerId=None, payload=None):
-            self._abort(PeerErrorType.UnavailableID,
-                        f'ID "${self.id}" is taken')
+        async def _on_server_idtaken(peerId=None, payload=None):
+            await self._abort(PeerErrorType.UnavailableID,
+                              f'ID "${self.id}" is taken')
 
         # The given API key cannot be found.
         @server_messenger.once(ServerMessageType.InvalidKey)
-        def _on_server_invalidkey(peerId=None, payload=None):
-            self._abort(PeerErrorType.InvalidKey,
-                        f'API KEY "${self._options.key}" is invalid')
+        async def _on_server_invalidkey(peerId=None, payload=None):
+            await self._abort(PeerErrorType.InvalidKey,
+                              f'API KEY "${self._options.key}" is invalid')
 
         # Another peer has closed its connection to this peer.
         @server_messenger.once(ServerMessageType.Leave)
@@ -288,7 +262,7 @@ class Peer(AsyncIOEventEmitter):
             connection = self.getConnection(peerId, connectionId)
             if connection and connection.peerConnection:
                 # Pass it on.
-                connection.handleMessage(message)
+                await connection.handleMessage(message)
             elif connectionId:
                 # Store for possible later use
                 self._storeMessage(connectionId, message)
@@ -343,7 +317,7 @@ class Peer(AsyncIOEventEmitter):
         # Retrieved pending messages from the server for remote peers.
         messages = self._getMessages(connectionId)
         for message in messages:
-            connection.handleMessage(message)
+            await connection.handleMessage(message)
 
     def _storeMessage(self,
                       connectionId: str, message: ServerMessage) -> None:

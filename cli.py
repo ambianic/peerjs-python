@@ -185,7 +185,7 @@ async def make_discoverable(peer=None):
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '
                           'Error %r', e)
-        await asyncio.sleep(10)
+        await asyncio.sleep(3)
 
 
 def _config_logger():

@@ -298,13 +298,13 @@ class DataConnection(BaseConnection):
     #     for blob in blobs:
     #         self.send(blob, True)
 
-    def handleMessage(self, message: ServerMessage) -> None:
+    async def handleMessage(self, message: ServerMessage) -> None:
         """Handle signaling server message."""
         payload = message.payload
         if message.type == ServerMessageType.Answer:
-            self._negotiator.handleSDP(message.type, payload.sdp)
+            await self._negotiator.handleSDP(message.type, payload.sdp)
         elif message.type == ServerMessageType.Candidate:
-            self._negotiator.handleCandidate(payload.candidate)
+            await self._negotiator.handleCandidate(payload['candidate'])
         else:
             log.warning(
               f"Unrecognized message type: {message.type}"
