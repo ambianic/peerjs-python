@@ -58,7 +58,7 @@ class Socket(AsyncIOEventEmitter):
             async for message in self._websocket:
                 try:
                     data = ServerMessage.from_json(message)
-                    log.info("Server message received: %s", data)
+                    log.debug("Server message received: %s", data)
                     self.emit(SocketEventType.Message, data)
                 except Exception as e:
                     log.exception("Invalid server message: %s, error %s",

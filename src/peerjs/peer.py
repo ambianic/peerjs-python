@@ -198,15 +198,15 @@ class Peer(AsyncIOEventEmitter):
         peerId = message.src
         payload = message.payload
 
-        # log.info('Handling server message type %s, '
-        #         'source peer/client id %s, payload %s',
-        #         type, peerId, payload)
+        log.info('\n Handling server message \n type %s, '
+                 '\n source peer/client id %s, \n payload %s, \n message %r',
+                 type, peerId, payload, message)
 
         server_messenger = AsyncIOEventEmitter()
 
         # The connection to the server is open.
         @server_messenger.once(ServerMessageType.Open)
-        def _on_server_open(peerId=None, payload=None):
+        def _on_server_open():
             self._lastServerId = self.id
             self._open = True
             log.debug('Signaling server connection open.')
@@ -214,31 +214,31 @@ class Peer(AsyncIOEventEmitter):
 
         # Server error.
         @server_messenger.once(ServerMessageType.Error)
-        async def _on_server_error(peerId=None, payload=None):
+        async def _on_server_error():
             await self._abort(PeerErrorType.ServerError, payload.msg)
 
         # The selected ID is taken.
         @server_messenger.once(ServerMessageType.IdTaken)
-        async def _on_server_idtaken(peerId=None, payload=None):
+        async def _on_server_idtaken():
             await self._abort(PeerErrorType.UnavailableID,
                               f'ID "${self.id}" is taken')
 
         # The given API key cannot be found.
         @server_messenger.once(ServerMessageType.InvalidKey)
-        async def _on_server_invalidkey(peerId=None, payload=None):
+        async def _on_server_invalidkey():
             await self._abort(PeerErrorType.InvalidKey,
                               f'API KEY "${self._options.key}" is invalid')
 
         # Another peer has closed its connection to this peer.
         @server_messenger.once(ServerMessageType.Leave)
-        def _on_server_leave(peerId=None, payload=None):
+        def _on_server_leave():
             log.debug(f'Received leave message from ${peerId}')
             self._cleanupPeer(peerId)
             self._connections.delete(peerId)
 
         # The offer sent to a peer has expired without response.
         @server_messenger.once(ServerMessageType.Expire)
-        def _on_server_expire(peerId=None, payload=None):
+        def _on_server_expire():
             self.emitError(PeerErrorType.PeerUnavailable,
                            f'Could not connect to peer ${peerId}')
 
@@ -248,9 +248,9 @@ class Peer(AsyncIOEventEmitter):
             await self._handle_offer(peerId, payload)
 
         # Something went wrong during emit message handling
-        @server_messenger.once('error')
-        def on_error(error_message):
-            log.warning('Error on server message emit: %r', error_message)
+        # @server_messenger.once('error')
+        # def on_error(error_message):
+        #     log.error('Error on server message emit: %r', error_message)
 
         is_handled = server_messenger.emit(type)
         if not is_handled:
@@ -303,7 +303,7 @@ class Peer(AsyncIOEventEmitter):
                 label=payload['label'],
                 serialization=payload['serialization'],
                 reliable=payload['reliable'],
-                _payload=payload,
+                _payload=payload['sdp'],
                 metadata=payload.get('metadata', None)
                 )
             await connection.start()
@@ -322,8 +322,8 @@ class Peer(AsyncIOEventEmitter):
     def _storeMessage(self,
                       connectionId: str, message: ServerMessage) -> None:
         """Store messages without a set up connection, to be claimed later."""
-        if not self._lostMessages.has(connectionId):
-            self._lostMessages.set(connectionId, [])
+        if connectionId not in self._lostMessages:
+            self._lostMessages[connectionId] = []
         message_list = self._lostMessages.get(connectionId)
         message_list.append(message)
 
@@ -333,8 +333,8 @@ class Peer(AsyncIOEventEmitter):
         return messages
 
     async def connect(self,
-                peer: str,
-                options: PeerConnectOption = {}) -> DataConnection:
+                      peer: str,
+                      options: PeerConnectOption = {}) -> DataConnection:
         """Return a DataConnection to the specified remote peer.
 
         See documentation for a complete list of options.

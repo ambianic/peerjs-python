@@ -94,12 +94,12 @@ class DataConnection(BaseConnection):
 
     async def start(self):
         """Start data connection negotiation."""
-        payload_option = self._payload or {'originator': True}
+        payload_options = self._payload or {'originator': True}
         log.info('Starting new connection with payload: %r '
                  'and payload_option: %r',
                  self._payload,
-                 payload_option)
-        await self._negotiator.startConnection(payload_option)
+                 payload_options)
+        await self._negotiator.startConnection(**payload_options)
 
     def initialize(self, dc: RTCDataChannel) -> None:
         """Configure datachannel when available.
@@ -191,13 +191,13 @@ class DataConnection(BaseConnection):
     # Exposed functionality for users.
     #
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close this connection."""
         self._buffer = []
         self._bufferSize = 0
         self._chunkedData = {}
         if self._negotiator:
-            self._negotiator.cleanup()
+            await self._negotiator.cleanup()
             self._negotiator = None
         if self.provider:  # provider: Peer
             self.provider._removeConnection(self)
