@@ -231,9 +231,9 @@ class Peer(AsyncIOEventEmitter):
 
         # Another peer has closed its connection to this peer.
         @server_messenger.once(ServerMessageType.Leave)
-        def _on_server_leave():
+        async def _on_server_leave():
             log.debug(f'Received leave message from ${peerId}')
-            self._cleanupPeer(peerId)
+            await self._cleanupPeer(peerId)
             self._connections.delete(peerId)
 
         # The offer sent to a peer has expired without response.
@@ -467,24 +467,24 @@ class Peer(AsyncIOEventEmitter):
             return
         log.debug(f'Destroy peer with ID:${self.id}')
         await self.disconnect()
-        self._cleanup()
+        await self._cleanup()
         self._destroyed = True
         self.emit(PeerEventType.Close)
 
-    def _cleanup(self) -> None:
+    async def _cleanup(self) -> None:
         """Disconnects every connection on this peer."""
         for peerId in self._connections.keys():
-            self._cleanupPeer(peerId)
+            await self._cleanupPeer(peerId)
             self._connections.delete(peerId)
             self.socket.removeAllListeners()
 
-    def _cleanupPeer(self, peerId: str) -> None:
+    async def _cleanupPeer(self, peerId: str) -> None:
         """Close all connections to this peer."""
         connections = self._connections.get(peerId)
         if not connections:
             return
         for connection in connections:
-            connection.close()
+            await connection.close()
 
     async def disconnect(self) -> None:
         """Disconnects the Peer's connection to the PeerServer.

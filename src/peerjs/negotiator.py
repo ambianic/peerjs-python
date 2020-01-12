@@ -1,9 +1,10 @@
 """Constructs for managing negotiations between Peers."""
+import json
 import logging
 
 # from .dataconnection import DataConnection
-from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.sdp import candidate_from_sdp
+from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from pyee import BaseEventEmitter
 
 from .baseconnection import BaseConnection
@@ -12,6 +13,22 @@ from .enums import ConnectionEventType, ConnectionType, PeerErrorType, ServerMes
 from .util import util
 
 log = logging.getLogger(__name__)
+
+
+def object_to_string(obj):
+    """Convert RTC object to JSON string."""
+    if isinstance(obj, RTCSessionDescription):
+        message = {"sdp": obj.sdp, "type": obj.type}
+    elif isinstance(obj, RTCIceCandidate):
+        message = {
+            "candidate": "candidate:" + candidate_to_sdp(obj),
+            "id": obj.sdpMid,
+            "label": obj.sdpMLineIndex,
+            "type": "candidate",
+        }
+    else:
+        message = {"type": "bye"}
+    return message
 
 
 class Negotiator:
@@ -223,7 +240,7 @@ class Negotiator:
                         'reliable': dataConnection.reliable,
                         'serialization': dataConnection.serialization
                         })
-                provider.socket.send({
+                await provider.socket.send({
                   'type': ServerMessageType.Offer,
                   'payload': payload,
                   'dst': self.connection.peer
@@ -245,20 +262,25 @@ class Negotiator:
         provider = self.connection.provider
         try:
             answer = await peerConnection.createAnswer()
-            log.info("Created answer. Connection options: %r",
+            log.info('\n Created answer: \n %r', answer)
+            log.info('\n Connection options: %r',
                      self.connection.options)
-            if self.connection.options.sdpTransform and \
-               callable(self.connection.options.sdpTransform):
-                answer.sdp = self.connection.options.sdpTransform(answer.sdp) \
+            sdpTransformFunction = \
+                self.connection.options.get('sdpTransform', None)
+            if sdpTransformFunction and \
+               callable(sdpTransformFunction):
+                answer.sdp = sdpTransformFunction(answer.sdp) \
                     or answer.sdp
+            json_answer = object_to_string(answer)
             try:
                 await peerConnection.setLocalDescription(answer)
                 log.info(f"Set localDescription: {answer}"
                          f"for:{self.connection.peer}")
-                provider.socket.send({
+
+                await provider.socket.send({
                     'type': ServerMessageType.Answer,
                     'payload': {
-                        'sdp': answer,
+                        'sdp': json_answer,
                         'type': self.connection.type,
                         'connectionId': self.connection.connectionId,
                         'browser': util.browser

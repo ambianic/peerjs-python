@@ -44,19 +44,32 @@ class DataConnection(BaseConnection):
     def __init__(self,
                  peerId: str = None,
                  provider=None,  # provider: Peer
-                 connectionId: str = None,
-                 label: str = None,
-                 serialization: str = None,
-                 reliable: bool = None,
-                 _payload: Any = None,
-                 **options):
+                 **options
+                 ):
         """Create a DataConnection instance."""
-        super().__init__(peerId, provider, options)
+        super().__init__(peerId, provider, **options)
+        self.options = options
+
+        def _apply_options(
+            connectionId: str = None,
+            label: str = None,
+            serialization: str = None,
+            reliable: bool = None,
+            _payload: Any = None,
+            **kwargs
+              ):
+            self.connectionId: str = \
+                connectionId or \
+                DataConnection.ID_PREFIX + util.randomToken()
+            self.label: str = label or self.connectionId
+            self.serialization: SerializationType = \
+                serialization or SerializationType.Binary
+            self.reliable: bool = reliable
+            self._payload = _payload
+
+        _apply_options(**options)
         self.peerId = peerId
         self._negotiator: Negotiator = None
-        self.label: str = None
-        self.serialization: SerializationType = None
-        self.reliable: bool = None
         self.stringify = lambda data: json.dumps(data)
         self.parse = lambda jsn: json.loads(jsn)
         self._buffer: []
@@ -73,12 +86,6 @@ class DataConnection(BaseConnection):
 
         self._dc: RTCDataChannel
         # self._encodingQueue = EncodingQueue()
-        self.connectionId = \
-            connectionId or \
-            DataConnection.ID_PREFIX + util.randomToken()
-        self.label = label or self.connectionId
-        self.serialization = serialization or SerializationType.Binary
-        self.reliable = reliable
         # @self._encodingQueue.on('done')
         # def on_eq_done(ab):  # ab : ArrayBuffer
         #     self._bufferedSend(ab)
@@ -90,7 +97,6 @@ class DataConnection(BaseConnection):
         #               'closing Data Connection.')
         #     self.close()
         self._negotiator = Negotiator(self)
-        self._payload = _payload
 
     async def start(self):
         """Start data connection negotiation."""

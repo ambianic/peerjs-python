@@ -76,8 +76,7 @@ class SocketEventType(Enum):
     Close = "close"
 
 
-@unique
-class ServerMessageType(Enum):
+class ServerMessageType:
     """Server Message Type."""
 
     Heartbeat = "HEARTBEAT"
