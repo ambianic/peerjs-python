@@ -1,6 +1,6 @@
 # peerjs-python
 
-Python port of [PeerJS](https://github.com/peers) client.
+Python port of [PeerJS](https://github.com/peers) client. Tracked in issue [#160](https://github.com/peers/peerjs/issues/610) of the official PeerJS project.
 
 Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
 
