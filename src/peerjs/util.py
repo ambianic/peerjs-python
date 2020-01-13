@@ -64,7 +64,7 @@ class Util:
     def validateId(self, id: str = None) -> bool:
         """Ensure alphanumeric ids."""
         # Allow empty ids
-        valid = not id or re.match('^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$', str)
+        valid = not id or re.match('^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$', id)
         log.debug('ID %s is %s valid', id, "" if valid else "not")
         return valid
 

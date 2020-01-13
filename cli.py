@@ -4,6 +4,8 @@ import asyncio
 import logging
 import sys
 
+import coloredlogs
+
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
 from peerjs.peerroom import PeerRoom
@@ -13,13 +15,13 @@ print(sys.version)
 
 log = logging.getLogger(__name__)
 
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 peer = None
 myPeerId = None
-AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'
-AMBIANIC_PNP_PORT = 443
-AMBIANIC_PNP_SECURE = True
+AMBIANIC_PNP_HOST = 'localhost'  # 'ambianic-pnp.herokuapp.com'
+AMBIANIC_PNP_PORT = 9779  # 443
+AMBIANIC_PNP_SECURE = False  # True
 time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
@@ -44,11 +46,10 @@ discoveryLoop = None
 async def join_peer_room(peer=None):
     """Join a peer room with other local peers."""
     # first try to find the remote peer ID in the same room
-    assert peer
     myRoom = PeerRoom(peer)
-    log.info('Fetching room members...')
+    log.debug('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
-    log.info('myRoom members %r', peerIds)
+    log.debug('myRoom members %r', peerIds)
 
 
 def _setPnPServiceConnectionHandlers(peer=None):
@@ -168,12 +169,23 @@ async def make_discoverable(peer=None):
     while True:
         log.info('Making peer discoverable.')
         try:
-            await join_peer_room(peer=peer)
+            # check if the websocket connection
+            # to the signaling server is alive
+            if peer.open:
+                await join_peer_room(peer=peer)
+            else:
+                log.info('Peer not connected to signaling server. '
+                         'Will retry in a bit.')
+                if peer.disconnected:
+                    log.info('Peer disconnected. Will try to reconnect.')
+                    await peer.reconnect()
+                else:
+                    log.info('Peer in a strange state: %r', peer)
         except Exception as e:
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '
                           'Error %r', e)
-        await asyncio.sleep(30)
+        await asyncio.sleep(3)
 
 
 def _config_logger():
@@ -189,6 +201,7 @@ def _config_logger():
     ch.setFormatter(fmt)
     root_logger.handlers = []
     root_logger.addHandler(ch)
+    coloredlogs.install(level=LOG_LEVEL, fmt=format_cfg)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ class Socket(AsyncIOEventEmitter):
         """Connect to WebSockets server."""
         assert wss_url
         # connect to websocket
-        websocket = await websockets.connect(wss_url, ssl=True)
+        websocket = await websockets.connect(wss_url, ping_interval=5)
         self._sendQueuedMessages()
         log.debug("WebSockets open")
         await websocket.send(
@@ -58,11 +58,11 @@ class Socket(AsyncIOEventEmitter):
             async for message in self._websocket:
                 try:
                     data = ServerMessage.from_json(message)
-                    log.info("Server message received: %s", data)
+                    log.debug("Server message received: %s", data)
                     self.emit(SocketEventType.Message, data)
                 except Exception as e:
-                    log.warning("Invalid server message: {}, error {}",
-                                message, e)
+                    log.exception("Invalid server message: %s, error %s",
+                                  message, e)
                 self.emit('message', message)
         except ConnectionClosedError as err:
             log.warning("Websocket connection closed with error. %s", err)
@@ -103,7 +103,7 @@ class Socket(AsyncIOEventEmitter):
         for message in copiedQueue:
             self.send(message)
 
-    def send(self, data: any) -> None:
+    async def send(self, data: any) -> None:
         """Expose send for DC & Peer."""
         # If the socket was already closed, nothing to do
         if self._disconnected:
@@ -115,13 +115,16 @@ class Socket(AsyncIOEventEmitter):
         if not self._id:
             self._messagesQueue.push(data)
             return
-        if not data.type:
+        if not data['type']:
             self.emit(SocketEventType.Error, "Invalid message")
             return
         if not self._wsOpen():
+            log.warning("Signaling websocket closed. Cannot send message %r.",
+                        data)
             return
         message = json.dumps(data)
-        self._websocket.send(message)
+        log.info('Message sent to signaling server: \n %r', message)
+        await self._websocket.send(message)
 
     async def close(self) -> None:
         """Close socket and stop any pending communication."""

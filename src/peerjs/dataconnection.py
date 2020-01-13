@@ -1,18 +1,22 @@
 """Convenience wrapper around RTCDataChannel."""
-from .util import util
-import logging
-from .negotiator import Negotiator
-from .enums import \
-  ConnectionType, \
-  ConnectionEventType, \
-  SerializationType, \
-  ServerMessageType
-from .baseconnection import BaseConnection
-from .servermessage import ServerMessage
+import asyncio
 # from .encodingqueue import EncodingQueue
 import json
+import logging
+from typing import Any
+
 from aiortc import RTCDataChannel
-import asyncio
+
+from .baseconnection import BaseConnection
+from .enums import (
+    ConnectionEventType,
+    ConnectionType,
+    SerializationType,
+    ServerMessageType,
+)
+from .negotiator import Negotiator
+from .servermessage import ServerMessage
+from .util import util
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +28,7 @@ class DataConnection(BaseConnection):
     MAX_BUFFERED_AMOUNT = 8 * 1024 * 1024
 
     @property
-    def type():
+    def type(self):
         """Return ConnectionType.Data."""
         return ConnectionType.Data
 
@@ -37,13 +41,35 @@ class DataConnection(BaseConnection):
         """Return current data buffer size."""
         return self._bufferSize
 
-    def __init__(self, peerId: str = None, provider=None, **options):
+    def __init__(self,
+                 peerId: str = None,
+                 provider=None,  # provider: Peer
+                 **options
+                 ):
         """Create a DataConnection instance."""
-        super(peerId, provider, options)
+        super().__init__(peerId, provider, **options)
+        self.options = options
+
+        def _apply_options(
+            connectionId: str = None,
+            label: str = None,
+            serialization: str = None,
+            reliable: bool = None,
+            _payload: Any = None,
+            **kwargs
+              ):
+            self.connectionId: str = \
+                connectionId or \
+                DataConnection.ID_PREFIX + util.randomToken()
+            self.label: str = label or self.connectionId
+            self.serialization: SerializationType = \
+                serialization or SerializationType.Binary
+            self.reliable: bool = reliable
+            self._payload = _payload
+
+        _apply_options(**options)
+        self.peerId = peerId
         self._negotiator: Negotiator = None
-        self.label: str = None
-        self.serialization: SerializationType = None
-        self.reliable: bool = None
         self.stringify = lambda data: json.dumps(data)
         self.parse = lambda jsn: json.loads(jsn)
         self._buffer: []
@@ -58,32 +84,28 @@ class DataConnection(BaseConnection):
         #         }
         # }
 
-        self._dc: RTCDataChannel
-        # self._encodingQueue = EncodingQueue()
-        if options.connectionId:
-            self.connectionId = options.connectionId
-        else:
-            self.connectionId = DataConnection.ID_PREFIX + util.randomToken()
-        if options.label:
-            self.label = options.label
-        else:
-            self.label = self.connectionId
-        self.serialization = options.serialization if \
-            options.serialization else SerializationType.Binary
-        self.reliable = self.options.reliable
-        @self._encodingQueue.on('done')
-        def on_eq_done(ab):  # ab : ArrayBuffer
-            self._bufferedSend(ab)
-
-        @self._encodingQueue.on('error')
-        def on_eq_error():
-            log.error(f'DC#${self.connectionId}: '
-                      'Error occured in encoding from blob to arraybuffer, '
-                      'closing Data Connection.')
-            self.close()
+        self._dc: RTCDataChannel = None
+        self._encodingQueue = None  # EncodingQueue()
+        # @self._encodingQueue.on('done')
+        # def on_eq_done(ab):  # ab : ArrayBuffer
+        #     self._bufferedSend(ab)
+        #
+        # @self._encodingQueue.on('error')
+        # def on_eq_error():
+        #     log.error(f'DC#${self.connectionId}: '
+        #               'Error occured in encoding from blob to arraybuffer, '
+        #               'closing Data Connection.')
+        #     self.close()
         self._negotiator = Negotiator(self)
-        payload_option = options._payload or {'originator': True}
-        self._negotiator.startConnection(payload_option)
+
+    async def start(self):
+        """Start data connection negotiation."""
+        payload_options = self._payload or {'originator': True}
+        log.debug('\n Starting new connection with payload: \n %r '
+                  '\n and payload_options: %r',
+                  self._payload,
+                  payload_options)
+        await self._negotiator.startConnection(**payload_options)
 
     def initialize(self, dc: RTCDataChannel) -> None:
         """Configure datachannel when available.
@@ -105,7 +127,9 @@ class DataConnection(BaseConnection):
 
         @self.dataChannel.on('message')
         async def on_datachannel_message(e):
-            log.debug(f'DC#${self.connectionId} dc onmessage: {e.data}')
+            log.info('DataChannel message from %s, \n: %r',
+                     self.peerId,
+                     e)
             await self._handleDataMessage(e)
 
         @self.dataChannel.on('close')
@@ -175,13 +199,13 @@ class DataConnection(BaseConnection):
     # Exposed functionality for users.
     #
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close this connection."""
         self._buffer = []
         self._bufferSize = 0
         self._chunkedData = {}
         if self._negotiator:
-            self._negotiator.cleanup()
+            await self._negotiator.cleanup()
             self._negotiator = None
         if self.provider:  # provider: Peer
             self.provider._removeConnection(self)
@@ -282,13 +306,13 @@ class DataConnection(BaseConnection):
     #     for blob in blobs:
     #         self.send(blob, True)
 
-    def handleMessage(self, message: ServerMessage) -> None:
+    async def handleMessage(self, message: ServerMessage) -> None:
         """Handle signaling server message."""
         payload = message.payload
         if message.type == ServerMessageType.Answer:
-            self._negotiator.handleSDP(message.type, payload.sdp)
+            await self._negotiator.handleSDP(message.type, payload.sdp)
         elif message.type == ServerMessageType.Candidate:
-            self._negotiator.handleCandidate(payload.candidate)
+            await self._negotiator.handleCandidate(payload['candidate'])
         else:
             log.warning(
               f"Unrecognized message type: {message.type}"
