@@ -28,4 +28,5 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [x] Complete and test connectivity with signaling server (peerjs-server).
 -  [x] Complete and test connectivity with web app peers.
 -  [ ] >90% code coverage with CI tests.
+-  [ ] Release to PyPi.
   
