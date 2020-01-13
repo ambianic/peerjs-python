@@ -198,9 +198,9 @@ class Peer(AsyncIOEventEmitter):
         peerId = message.src
         payload = message.payload
 
-        log.info('\n Handling server message \n type %s, '
-                 '\n source peer/client id %s, \n payload %s, \n message %r',
-                 type, peerId, payload, message)
+        log.debug('\n Handling server message \n type %s, '
+                  '\n source peer/client id %s, \n payload %s, \n message %r',
+                  type, peerId, payload, message)
 
         server_messenger = AsyncIOEventEmitter()
 
@@ -273,8 +273,8 @@ class Peer(AsyncIOEventEmitter):
         """Handle remote peer offer for a direct connection."""
         # we should consider switching this to CALL/CONNECT,
         # but this is the least breaking option.
-        log.info("Remote peer id %s offering connection. Payload %s",
-                 peerId, payload)
+        log.debug("\n Remote peer id %s offering connection. \n Payload %s",
+                  peerId, payload)
         connectionId = payload['connectionId']
         connection = self.getConnection(peerId, connectionId)
 

@@ -84,8 +84,8 @@ class DataConnection(BaseConnection):
         #         }
         # }
 
-        self._dc: RTCDataChannel
-        # self._encodingQueue = EncodingQueue()
+        self._dc: RTCDataChannel = None
+        self._encodingQueue = None  # EncodingQueue()
         # @self._encodingQueue.on('done')
         # def on_eq_done(ab):  # ab : ArrayBuffer
         #     self._bufferedSend(ab)
@@ -101,10 +101,10 @@ class DataConnection(BaseConnection):
     async def start(self):
         """Start data connection negotiation."""
         payload_options = self._payload or {'originator': True}
-        log.info('Starting new connection with payload: %r '
-                 'and payload_option: %r',
-                 self._payload,
-                 payload_options)
+        log.debug('\n Starting new connection with payload: \n %r '
+                  '\n and payload_options: %r',
+                  self._payload,
+                  payload_options)
         await self._negotiator.startConnection(**payload_options)
 
     def initialize(self, dc: RTCDataChannel) -> None:
@@ -127,7 +127,9 @@ class DataConnection(BaseConnection):
 
         @self.dataChannel.on('message')
         async def on_datachannel_message(e):
-            log.debug(f'DC#${self.connectionId} dc onmessage: {e.data}')
+            log.info('DataChannel message from %s, \n: %r',
+                     self.peerId,
+                     e)
             await self._handleDataMessage(e)
 
         @self.dataChannel.on('close')
