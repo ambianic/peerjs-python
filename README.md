@@ -15,11 +15,13 @@ This project was originally motivated while searching for a way to:
 
 Other key goals:
 -  Easy Airdrop-like plug and play discovery and pairing between web app and edge devices. 
--  Rely only on standard broadly supported web browser features for the web app.
+-  Direct peer-to-peer connectivity without dedicated data tunneling servers.
+-  Rely only on [standard](https://www.w3.org/TR/webrtc/) broadly supported web browser features.
 -  No proprietary browser plug-ins. 
 -  No intermediary cloud service providers to store and sync user data. 
--  No tedious and brittle setup of dynamic DNS host per edge device with SSH tunnel between a public host name and the edge device.
--  No need to obtain and manage web host SSL certificates signed by a public CA for each edge device.
+-  No tedious and complicated NAT setups of dynamic DNS with SSH tunnels between public IP servers and edge devices behind firewall.
+-  No IP traffic costs for data tunneling through a cloud service.
+-  High throughput and scalability due to lightweight signaling service without a persistence layer.
 
 ## Project Status
 
@@ -30,3 +32,11 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [ ] >90% code coverage with CI tests.
 -  [ ] Release to PyPi.
   
+## Related Open Source projects
+
+There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling.
+
+- [Python Proxy](https://github.com/qwj/python-proxy): Asynchronous tunnel proxy implemented in Python 3 asyncio.
+- [Proxy.py](https://github.com/abhinavsingh/proxy.py): HTTP proxy server written in Python. 
+- [Inlets](https://github.com/inlets/inlets) Reverse proxy and service tunnel written in Go.
+- [Macchina.io] (https://github.com/my-devices/sdk) IoT tunneling proxy written in C++.
