@@ -15,13 +15,18 @@ This project was originally motivated while searching for a way to:
 
 Other key goals:
 -  Easy Airdrop-like plug and play discovery and pairing between web app and edge devices. 
--  Direct peer-to-peer connectivity without dedicated data tunneling servers.
+-  Direct peer-to-peer connectivity to minimize:
+    - latency
+    - architecture complexity
+    - costs associated with traffic and hosting of tunneling servers
+    - exposure to public server security attacks
 -  Rely only on [standard](https://www.w3.org/TR/webrtc/) broadly supported web browser features.
--  No proprietary browser plug-ins. 
+    -  Stable mobile device support (iOS, Android, Raspberry Pi)
+    -  Stable desktop OS support (Windows, Mac OS, Linux)
+    -  No need for browser plug-ins
 -  No intermediary cloud service providers to store and sync user data. 
 -  No tedious and complicated NAT setups of dynamic DNS with SSH tunnels between public IP servers and edge devices behind firewall.
--  No IP traffic costs for data tunneling through a cloud service.
--  High throughput and scalability due to lightweight signaling service without a persistence layer.
+-  High throughput and scalability via lightweight signaling service without a persistence layer.
 
 ## Project Status
 
