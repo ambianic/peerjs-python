@@ -13,7 +13,7 @@ Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
 This project was originally motivated while searching for a way to: 
 -  Connect a Progressive Web App ([Ambianic UI](https://github.com/ambianic/ambianic-ui)) directly and securely to an edge device ([Ambianic Edge](https://github.com/ambianic/ambianic-edge)) running Python app on a Raspberry Pi behind a home Internet router. 
 
-Other key goals:
+Other key requirements:
 -  Easy Airdrop-like plug and play discovery and pairing between web app and edge devices. 
 -  Direct peer-to-peer connectivity to minimize:
     - latency
