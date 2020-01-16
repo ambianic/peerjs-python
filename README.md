@@ -20,6 +20,11 @@ Other key requirements:
     - architecture complexity
     - costs associated with traffic and hosting of tunneling servers
     - exposure to public server security attacks
+-  Support for:
+    - Secure connections
+    - Bi-directional data-channel
+    - Low latency audio/video media streaming
+    - Bi-directional live audio/video media
 -  Rely only on [standard](https://www.w3.org/TR/webrtc/) broadly supported web browser features.
     -  Stable mobile device support (iOS, Android, Raspberry Pi)
     -  Stable desktop OS support (Windows, Mac OS, Linux)
