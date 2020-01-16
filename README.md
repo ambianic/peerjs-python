@@ -38,9 +38,10 @@ Other key requirements:
 Initial working prototype completed. PeerJS Python is now able to connect over WebRTC DataChannel to PeerJS in the browser and exchange messages.
 
 -  [x] Complete and test connectivity with signaling server (peerjs-server).
--  [x] Complete and test connectivity with web app peers.
+-  [x] Complete and test data channel connectivity with web app peers.
 -  [ ] >90% code coverage with CI tests.
--  [ ] Release to PyPi.
+-  [ ] Release initial version to PyPi.
+-  [ ] Complete port and test media support.
   
 ## Related Open Source projects
 
