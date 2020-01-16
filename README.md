@@ -44,9 +44,9 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
   
 ## Related Open Source projects
 
-There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling.
+There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling servers.
 
 - [Python Proxy](https://github.com/qwj/python-proxy): Asynchronous tunnel proxy implemented in Python 3 asyncio.
 - [Proxy.py](https://github.com/abhinavsingh/proxy.py): HTTP proxy server written in Python. 
 - [Inlets](https://github.com/inlets/inlets) Reverse proxy and service tunnel written in Go.
-- [Macchina.io] (https://github.com/my-devices/sdk) IoT tunneling proxy written in C++.
+- [Macchina.io](https://github.com/my-devices/sdk) IoT tunneling proxy written in C++.
