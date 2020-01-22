@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import sys
+import json
 
 import coloredlogs
 
@@ -10,6 +11,7 @@ import coloredlogs
 from peerjs.peer import Peer, PeerOptions
 from peerjs.peerroom import PeerRoom
 from peerjs.util import util
+from peerjs.enums import ConnectionEventType, PeerEventType
 
 print(sys.version)
 
@@ -19,9 +21,9 @@ LOG_LEVEL = logging.INFO
 
 peer = None
 myPeerId = None
-AMBIANIC_PNP_HOST = 'localhost'  # 'ambianic-pnp.herokuapp.com'
-AMBIANIC_PNP_PORT = 9779  # 443
-AMBIANIC_PNP_SECURE = False  # True
+AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'  # 'localhost'
+AMBIANIC_PNP_PORT = 443  # 9779
+AMBIANIC_PNP_SECURE = True  # False
 time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
@@ -53,9 +55,11 @@ async def join_peer_room(peer=None):
 
 
 def _setPnPServiceConnectionHandlers(peer=None):
+    assert peer
     global myPeerId
-    @peer.on('open')
+    @peer.on(PeerEventType.Open)
     async def peer_open(id):
+        log.warning('Peer signaling connection open.')
         global myPeerId
         # Workaround for peer.reconnect deleting previous id
         if peer.id is None:
@@ -64,72 +68,63 @@ def _setPnPServiceConnectionHandlers(peer=None):
         else:
             if myPeerId != peer.id:
                 log.info(
-                    'pnpService: Service returned new peerId. Old %s, New %s',
+                    'PNP Service returned new peerId. Old %s, New %s',
                     myPeerId,
                     peer.id
                     )
             myPeerId = peer.id
-        log.info('pnpService: myPeerId: ', peer.id)
+        log.info('myPeerId: %s', peer.id)
 
-    @peer.on('disconnected')
-    async def peer_disconnected():
+    @peer.on(PeerEventType.Disconnected)
+    async def peer_disconnected(peerId):
         global myPeerId
-        log.info('pnpService: Connection lost. Please reconnect')
+        log.info('pnpService: Peer %s disconnected from server.', peerId)
         # Workaround for peer.reconnect deleting previous id
         if not peer.id:
             log.info('BUG WORKAROUND: Peer lost ID. '
                      'Resetting to last known ID.')
             peer._id = myPeerId
         peer._lastServerId = myPeerId
-        peer.reconnect()
+        await peer.reconnect()
 
-    @peer.on('close')
+    @peer.on(PeerEventType.Close)
     def peer_close():
         # peerConnection = null
-        log.info('pnpService: Connection closed')
+        log.warning('Peer connection closed')
 
-    @peer.on('error')
+    @peer.on(PeerEventType.Error)
     def peer_error(err):
-        log.warning('pnpService %s', err)
-        log.info('peerConnectionStatus', peerConnectionStatus)
+        log.exception('Peer error %s', err)
+        log.warning('peerConnectionStatus %s', peerConnectionStatus)
         # retry peer connection in a few seconds
-        asyncio.call_later(3, pnp_service_connect)
+        # loop = asyncio.get_event_loop()
+        # loop.call_later(3, pnp_service_connect)
 
     # remote peer tries to initiate connection
-    @peer.on('connection')
+    @peer.on(PeerEventType.Connection)
     async def peer_connection(peerConnection):
-        log.info('remote peer trying to establish connection')
+        log.warning('Remote peer trying to establish connection')
         _setPeerConnectionHandlers(peerConnection)
 
 
 def _setPeerConnectionHandlers(peerConnection):
-    @peerConnection.on('open')
+    @peerConnection.on(ConnectionEventType.Open)
     async def pc_open():
-        log.info('pnpService: Connected to: %s', peerConnection.peer)
+        log.warning('Connected to: %s', peerConnection.peer)
 
     # Handle incoming data (messages only since this is the signal sender)
-    @peerConnection.on('data')
+    @peerConnection.on(ConnectionEventType.Data)
     async def pc_data(data):
-        log.info('pnpService: data received from remote peer %r', data)
-        pass
+        log.warning('data received from remote peer \n%r', data)
+        response = {'name': 'Ambianic-Edge', 'version': '1.0.2020'}
+        rjson = json.dumps(response)
+        log.warning('Sending response: \n%r', rjson)
+        await peerConnection.send(rjson)
 
-    @peerConnection.on('close')
+    @peerConnection.on(ConnectionEventType.Close)
     async def pc_close():
         log.info('Connection to remote peer closed')
 
-
-# async def _run_answer(pc, signaling):
-#     await signaling.connect()
-#     @pc.on("datachannel")
-#     def on_datachannel(channel):
-#         _channel_log(channel, "-", "created by remote party")
-#         @channel.on("message")
-#         def on_message(message):
-#             _channel_log(channel, "<", message)
-#             if isinstance(message, str) and message.startswith("ping"):
-#                 # reply
-#                 _channel_send(channel, "pong" + message[4:])
-#     await _consume_signaling(pc, signaling)
 
 async def pnp_service_connect() -> Peer:
     """Create a Peer instance and register with PnP signaling server."""
@@ -167,7 +162,7 @@ async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
     assert peer
     while True:
-        log.info('Making peer discoverable.')
+        log.debug('Making peer discoverable.')
         try:
             # check if the websocket connection
             # to the signaling server is alive
@@ -180,7 +175,7 @@ async def make_discoverable(peer=None):
                     log.info('Peer disconnected. Will try to reconnect.')
                     await peer.reconnect()
                 else:
-                    log.info('Peer in a strange state: %r', peer)
+                    log.info('Peer still establishing connection. %r', peer)
         except Exception as e:
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '
@@ -222,11 +217,11 @@ if __name__ == "__main__":
     #     coro = _run_offer(pc, signaling)
     # else:
     #     coro = _run_answer(pc, signaling)
-    coro = pnp_service_connect()
+    coro = pnp_service_connect
     # run event loop
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(coro)
+        loop.run_until_complete(coro())
     except KeyboardInterrupt:
         log.info('KeyboardInterrupt detected. Exiting...')
         pass

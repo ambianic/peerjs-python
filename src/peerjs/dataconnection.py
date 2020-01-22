@@ -67,6 +67,7 @@ class DataConnection(BaseConnection):
             self.reliable: bool = reliable
             self._payload = _payload
 
+        log.debug('Applying DataConnection options:\n%r', options)
         _apply_options(**options)
         self.peerId = peerId
         self._negotiator: Negotiator = None
@@ -101,76 +102,97 @@ class DataConnection(BaseConnection):
     async def start(self):
         """Start data connection negotiation."""
         payload_options = self._payload or {'originator': True}
-        log.debug('\n Starting new connection with payload: \n %r '
-                  '\n and payload_options: %r',
+        log.debug('\n Starting new connection with payload: \n%r '
+                  '\n and payload_options: \n%r',
                   self._payload,
                   payload_options)
         await self._negotiator.startConnection(**payload_options)
 
-    def initialize(self, dc: RTCDataChannel) -> None:
+    async def initialize(self, dc: RTCDataChannel) -> None:
         """Configure datachannel when available.
 
         Called by the Negotiator when the DataChannel is ready.
         """
         self._dc = dc
-        self._configureDataChannel()
+        await self._configureDataChannel()
 
-    def _configureDataChannel(self) -> None:
+    async def _configureDataChannel(self) -> None:
         if not util.supports.binaryBlob or util.supports.reliable:
             self.dataChannel.binaryType = "arraybuffer"
+
+        log.debug('Configuring DataChannel')
 
         @self.dataChannel.on('open')
         async def on_datachannel_open():
             log.debug(f'DC#${self.connectionId} dc connection success')
+            log.debug('DataChannel open. Transport capabilities: \n%r',
+                      self.dataChannel.transport.getCapabilities())
             self._open = True
             self.emit(ConnectionEventType.Open)
 
+        if self.dataChannel.readyState == 'open':
+            # dataChannel already moved to open state
+            # and we may miss the 'open' event
+            # so lets not rely on that
+            await on_datachannel_open()
+
         @self.dataChannel.on('message')
         async def on_datachannel_message(e):
-            log.info('DataChannel message from %s, \n: %r',
-                     self.peerId,
-                     e)
             await self._handleDataMessage(e)
 
         @self.dataChannel.on('close')
-        async def on_datachannel_close(e):
+        async def on_datachannel_close():
             log.debug(f'DC#${self.connectionId} dc closed for: {self.peer}')
-            self.close()
+            await self.close()
 
     async def _handleDataMessage(self, data) -> None:
         """Handle a DataChannel message."""
-        # datatype = data.constructor
-        # isBinarySerialization = \
-        #     self.serialization == SerializationType.Binary or \
-        #     self.serialization == SerializationType.BinaryUTF8
+        log.warning('\n Received data (type %s) from remote peer: \n%r',
+                    type(data),
+                    data)
+        log.debug('Serialization type: %s', self.serialization)
+        isBinarySerialization = \
+            self.serialization == SerializationType.Binary or \
+            self.serialization == SerializationType.BinaryUTF8
+        log.warning('isBinarySerialization: %r',
+                    isBinarySerialization)
         deserializedData = data
         # Peerjs JavaScript version uses a messagepack library
         #   which is not ported to Python yet
-        # if isBinarySerialization:
-        #     if datatype == Blob:
-        #         # Datatype should never be blob
-        #         ab = await util.blobToArrayBuffer(data)
-        #         unpackedData = util.unpack(ab)
-        #         self.emit(ConnectionEventType.Data, unpackedData)
-        #         return
-        #     if datatype == ArrayBuffer:
-        #         deserializedData = util.unpack(data)
-        #     elif datatype == String:
-        #         # String fallback for binary data for browsers
-        #         # that don't support binary yet
-        #         ab = util.binaryStringToArrayBuffer(data)
-        #         deserializedData = util.unpack(ab)
+        if isBinarySerialization:
+            #     if datatype == Blob:
+            #         # Datatype should never be blob
+            #         ab = await util.blobToArrayBuffer(data)
+            #         unpackedData = util.unpack(ab)
+            #         self.emit(ConnectionEventType.Data, unpackedData)
+            #         return
+            if isinstance(data, bytes):
+                log.warning('Unpacking data...')
+                deserializedData = util.unpack(data)
+            #     elif datatype == String:
+            #         # String fallback for binary data for browsers
+            #         # that don't support binary yet
+            #         ab = util.binaryStringToArrayBuffer(data)
+            #         deserializedData = util.unpack(ab)
         if self.serialization == SerializationType.Raw:
-            # no special massaging of deserialized data
+            # no special manipulation of deserialized data
             pass
         elif self.serialization == SerializationType.JSON:
             deserializedData = self.parse(data)
 
+        # log.debug('\n Deserialized data (type %s): \n%r',
+        #           type(deserializedData),
+        #           deserializedData)
+        #
+        # if isinstance(deserializedData, str):
+        #     log.warning('\n Deserialized string %s',
+        #                 deserializedData)
+
         # Check if we've chunked--if so, piece things back together.
         # We're guaranteed that this isn't 0.
-        if deserializedData.__peerData:
-            await self._handleChunk(deserializedData)
-            return
+        # if deserializedData.get('__peerData', None):
+        #     await self._handleChunk(deserializedData)
+        #     return
 
         self.emit(ConnectionEventType.Data, deserializedData)
 
@@ -211,20 +233,22 @@ class DataConnection(BaseConnection):
             self.provider._removeConnection(self)
         self.provider = None
         if self.dataChannel:
-            self.dataChannel.removeAllListeners()
+            self.dataChannel.remove_all_listeners()
             self._dc = None
         if self._encodingQueue:
             self._encodingQueue.destroy()
-            self._encodingQueue.removeAllListeners()
+            self._encodingQueue.remove_all_listeners()
             self._encodingQueue = None
         if not self.open:
             return
         self._open = False
         self.emit(ConnectionEventType.Close)
 
-    def send(self, data, chunked: bool) -> None:
+    async def send(self, data, chunked: bool = False) -> None:
         """Send data to the peer on the other side of this connection."""
+        log.warning('DataConnection entered send(data): \n%r', data)
         if not self.open:
+            log.warning('DataConnection not open')
             self.emit(
                 ConnectionEventType.Error,
                 RuntimeError(
@@ -235,8 +259,11 @@ class DataConnection(BaseConnection):
             )
             return
 
+        log.warning('Serialization: %r', self.serialization)
+
         if self.serialization == SerializationType.JSON:
-            self._bufferedSend(self.stringify(data))
+            log.warning('DataConnection sending JSON data: \n%r', data)
+            await self._bufferedSend(self.stringify(data))
         # Blob is a JavaScript browser type. Not supported in Python.
         # elif \
         #     self.serialization == SerializationType.Binary or \
@@ -254,7 +281,8 @@ class DataConnection(BaseConnection):
         #     else:
         #         self._bufferedSend(blob)
         else:
-            self._bufferedSend(data)
+            log.warning('DataConnection sending data: \n%r', data)
+            await self._bufferedSend(data)
 
     async def _bufferedSend(self, msg: any) -> None:
         if self._buffering or not await self._trySend(msg):
@@ -263,6 +291,7 @@ class DataConnection(BaseConnection):
 
     async def _trySend(self, msg) -> bool:
         """Return true if the send succeeds."""
+        log.debug('DataChannel entered _trySend(msg): \n%r', msg)
         if not self.open:
             return False
         if self.dataChannel.bufferedAmount > \
@@ -277,11 +306,12 @@ class DataConnection(BaseConnection):
             asyncio.create_task(delayBuf())
             return False
         try:
+            log.debug('DataChannel sending message: \n%r', msg)
             self.dataChannel.send(msg)
         except Exception as e:
-            log.error(f'DC#:${self.connectionId} Error when sending: {e}')
+            log.exception(f'DC#:${self.connectionId} Error when sending: {e}')
             self._buffering = True
-            self.close()
+            await self.close()
             return False
         return True
 

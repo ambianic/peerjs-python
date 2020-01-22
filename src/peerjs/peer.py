@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any, List
+import traceback
 
 from pyee import AsyncIOEventEmitter
 
@@ -199,7 +200,8 @@ class Peer(AsyncIOEventEmitter):
         payload = message.payload
 
         log.debug('\n Handling server message \n type %s, '
-                  '\n source peer/client id %s, \n payload %s, \n message %r',
+                  '\n source peer/client id %s, \n message payload %s, '
+                  '\n full message %r',
                   type, peerId, payload, message)
 
         server_messenger = AsyncIOEventEmitter()
@@ -209,7 +211,7 @@ class Peer(AsyncIOEventEmitter):
         def _on_server_open():
             self._lastServerId = self.id
             self._open = True
-            log.debug('Signaling server connection open.')
+            log.warning('Signaling server connection open.')
             self.emit(PeerEventType.Open, self.id)
 
         # Server error.
@@ -284,9 +286,9 @@ class Peer(AsyncIOEventEmitter):
                         f'existing Connection ID:${connectionId}')
 
         # Create a new connection.
-        if payload['type'] == ConnectionType.Media:
+        if payload['type'] == ConnectionType.Media.value:
             pass
-        # MediaConnection not supported in the Python port of PeerJS yet.
+        # MediaConnection not supported yet in the Python port of PeerJS yet.
         #       Contributions welcome!
         #   connection = new MediaConnection(peerId, this, {
         #     connectionId: connectionId,
@@ -295,7 +297,7 @@ class Peer(AsyncIOEventEmitter):
         #   });
         #   this._addConnection(peerId, connection);
         #   this.emit(PeerEventType.Call, connection);
-        elif payload['type'] == ConnectionType.Data:
+        elif payload['type'] == ConnectionType.Data.value:
             connection = DataConnection(
                 peerId=peerId,
                 provider=self,
@@ -303,7 +305,7 @@ class Peer(AsyncIOEventEmitter):
                 label=payload['label'],
                 serialization=payload['serialization'],
                 reliable=payload['reliable'],
-                _payload=payload['sdp'],
+                _payload=payload,
                 metadata=payload.get('metadata', None)
                 )
             await connection.start()
@@ -439,19 +441,26 @@ class Peer(AsyncIOEventEmitter):
         in which case
         it retains its disconnected state and its existing connections.
         """
-        log.error("Aborting!")
+        log.error('Aborting! \n'
+                  'PeerErrorType: %s \n'
+                  'Error message: %s',
+                  type,
+                  message)
+        traceback.print_stack()
         self.emitError(type, message)
         if not self._lastServerId:
             await self.destroy()
         else:
-            self.disconnect()
+            await self.disconnect()
 
     def emitError(self, type: PeerErrorType, err: str) -> None:
         """Emit a typed error message."""
+        log.warning('Connection error: %s', err)
         if isinstance(err, str):
             err = RuntimeError(err)
         else:
             assert isinstance(err, Exception)
+        log.warning('Connection error: \n%s', err)
         err.type = type
         self.emit(PeerEventType.Error, err)
 
@@ -473,10 +482,13 @@ class Peer(AsyncIOEventEmitter):
 
     async def _cleanup(self) -> None:
         """Disconnects every connection on this peer."""
-        for peerId in self._connections.keys():
+        # we need to iterate over a copy
+        # in order to remove elements from the original dict
+        keys_copy = list(self._connections.keys())
+        for peerId in keys_copy:
             await self._cleanupPeer(peerId)
-            self._connections.delete(peerId)
-            self.socket.removeAllListeners()
+            self._connections.pop(peerId, None)
+        self.socket.remove_all_listeners()
 
     async def _cleanupPeer(self, peerId: str) -> None:
         """Close all connections to this peer."""
