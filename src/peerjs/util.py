@@ -4,6 +4,7 @@ import math
 import re
 from dataclasses import dataclass
 from uuid import uuid4
+import msgpack
 
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
@@ -60,6 +61,8 @@ class Util:
         # Binary stuff
         self._dataCount: int = 1
         self._supports = UtilSupports()
+        self.pack = msgpack.packb
+        self.unpack = msgpack.unpackb
 
     def validateId(self, id: str = None) -> bool:
         """Ensure alphanumeric ids."""

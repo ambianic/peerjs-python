@@ -6,15 +6,16 @@ from enum import Enum, unique
 class ConnectionEventType(Enum):
     """Connection event types."""
 
-    Open = "open"
-    Stream = "stream"
-    Data = "data"
-    Close = "close"
-    Error = "error"
+    Open = "Open"
+    Stream = "Stream"
+    Data = "Data"
+    Close = "Close"
+    Error = "Error"
     IceStateChanged = "iceStateChanged"
 
 
-class ConnectionType:
+@unique
+class ConnectionType(Enum):
     """Connection type."""
 
     Data = "data"
@@ -25,12 +26,12 @@ class ConnectionType:
 class PeerEventType(Enum):
     """Peer event type."""
 
-    Open = "open"
-    Close = "close"
+    Open = "Open"
+    Close = "Close"
     Connection = "connection"
-    Call = "call"
+    Call = "Call"
     Disconnected = "disconnected"
-    Error = "error"
+    Error = "Error"
 
 
 @unique
@@ -51,8 +52,7 @@ class PeerErrorType(Enum):
     WebRTC = "webrtc"
 
 
-@unique
-class SerializationType(Enum):
+class SerializationType:
     """Serialization type."""
 
     # Binary and BinaryUTF8 use message packing
@@ -70,13 +70,14 @@ class SerializationType(Enum):
 class SocketEventType(Enum):
     """Socket event type."""
 
-    Message = "message"
-    Disconnected = "disconnected"
-    Error = "error"
-    Close = "close"
+    Message = "Message"
+    Disconnected = "Disconnected"
+    Error = "Error"
+    Close = "Close"
 
 
-class ServerMessageType:
+@unique
+class ServerMessageType(Enum):
     """Server Message Type."""
 
     Heartbeat = "HEARTBEAT"

@@ -1,22 +1,20 @@
 """Constructs for managing negotiations between Peers."""
-import json
 import logging
 
 # from .dataconnection import DataConnection
 from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
-from pyee import BaseEventEmitter
-
-from .baseconnection import BaseConnection
+from pyee import AsyncIOEventEmitter
 # import { MediaConnection } from "./mediaconnection";
 from .enums import ConnectionEventType, ConnectionType, PeerErrorType, ServerMessageType
 from .util import util
+from .baseconnection import BaseConnection
 
 log = logging.getLogger(__name__)
 
 
-def object_to_string(obj):
-    """Convert RTC object to JSON string."""
+def object_to_dict(obj):
+    """Convert RTC object to dict."""
     if isinstance(obj, RTCSessionDescription):
         message = {"sdp": obj.sdp, "type": obj.type}
     elif isinstance(obj, RTCIceCandidate):
@@ -41,7 +39,7 @@ class Negotiator:
     async def startConnection(
             self,
             originator=None,
-            sdp: str = None,
+            sdp: dict = None,
             _stream=None,
             reliable=None,
             type=None,
@@ -63,17 +61,17 @@ class Negotiator:
                          dataConnection.label, reliable)
                 dataChannel = peerConnection.createDataChannel(
                     dataConnection.label, ordered=reliable)
-                dataConnection.initialize(dataChannel)
+                await dataConnection.initialize(dataChannel)
             await self._makeOffer()
         else:
             # receive connection offer originated by remote peer
-            await self.handleSDP(type=type, sdp=sdp)
+            await self.handleSDP(type=ServerMessageType.Offer, sdp=sdp)
 
     def _startPeerConnection(self) -> RTCPeerConnection:
         """Start a Peer Connection."""
-        log.debug("Creating RTCPeerConnection.")
-        peerConnection = RTCPeerConnection(
-            self.connection.provider.options.config)
+        config = self.connection.provider.options.config
+        log.debug("Creating RTCPeerConnection with config:\n%r", config)
+        peerConnection = RTCPeerConnection(config)
         self._setupListeners(peerConnection)
         return peerConnection
 
@@ -109,13 +107,13 @@ class Negotiator:
         @peerConnection.on('icegatheringstatechange')
         def peerconn_icegatheringstatechange():
             if peerConnection.iceGatheringState == 'complete':
-                log.warning('Local ICE candidates gathered.')
+                log.debug('Local ICE candidates gathered.')
 
         @peerConnection.on('iceconnectionstatechange')
         def peerconn_oniceconnectionstatechange():
-            state_change = BaseEventEmitter()
+            state_change = AsyncIOEventEmitter()
             @state_change.once("failed")
-            def on_failed(error=None):
+            async def on_failed(error=None):
                 log.warning(
                     "\n IceConnectionState failed with error %s "
                     "\n Closing connections to peer id %s",
@@ -127,7 +125,7 @@ class Negotiator:
                     ConnectionError(
                         f"Negotiation of connection to {peerId} failed.")
                     )
-                self.connection.close()
+                await self.connection.close()
 
             @state_change.once("closed")
             def on_closed():
@@ -155,7 +153,7 @@ class Negotiator:
 
             @state_change.once("completed")
             def on_completed():
-                log.warning(
+                log.debug(
                     'iceConnectionState completed for peer id %s',
                     peerId
                     )
@@ -167,7 +165,7 @@ class Negotiator:
                 #       peerconn_onicecandidate)
                 pass
 
-            log.warning(
+            log.debug(
                 'iceConnectionState event: %s',
                 peerConnection.iceConnectionState
                 )
@@ -182,10 +180,10 @@ class Negotiator:
         # Fired between offer and answer, so options should already be saved
         # in the options hash.
         @peerConnection.on("datachannel")
-        def peerconn_ondatachanel(dataChannel):
-            log.warning("Received data channel %r", dataChannel)
+        async def peerconn_ondatachanel(dataChannel):
+            log.debug("Received data channel %r", dataChannel)
             connection = provider.getConnection(peerId, connectionId)
-            connection.initialize(dataChannel)
+            await connection.initialize(dataChannel)
 
         # MEDIACONNECTION.
         log.debug("Listening for remote stream.")
@@ -200,8 +198,8 @@ class Negotiator:
 
     async def cleanup(self) -> None:
         """Clean up resources after connection closes."""
-        log.info("Closing and cleaning up PeerConnection to %s",
-                 self.connection.peer)
+        log.debug("Closing and cleaning up PeerConnection to %s",
+                  self.connection.peer)
         peerConnection = self.connection.peerConnection
         if not peerConnection:
             return
@@ -220,7 +218,7 @@ class Negotiator:
             try:
                 await peerConnection.close()
             except Exception as err:
-                log.exception('Error while closing connection', err)
+                log.exception('Error while closing connection %r', err)
 
     async def _makeOffer(self):
         peerConnection = self.connection.peerConnection
@@ -254,7 +252,7 @@ class Negotiator:
                         'serialization': dataConnection.serialization
                         })
                 await provider.socket.send({
-                  'type': ServerMessageType.Offer,
+                  'type': ServerMessageType.Offer.value,
                   'payload': payload,
                   'dst': self.connection.peer
                 })
@@ -281,22 +279,21 @@ class Negotiator:
                callable(sdpTransformFunction):
                 answer.sdp = sdpTransformFunction(answer.sdp) \
                     or answer.sdp
-            log.info('\n Created answer header: \n %r', answer)
-            log.info('\n Connection options: %r',
-                     self.connection.options)
+            log.debug('\n Created answer header: \n %r', answer)
+            log.debug('\n Connection options: %r', self.connection.options)
             try:
                 log.info('Gathering ICE candidates to complete answer...')
                 await peerConnection.setLocalDescription(answer)
                 answer = peerConnection.localDescription
-                json_answer = object_to_string(answer)
-                log.warning('\n Sending SDP ANSWER to peer id %s: \n %r ',
-                            self.connection.peer,
-                            json_answer)
+                json_answer = object_to_dict(answer)
+                log.debug('\n Sending SDP ANSWER to peer id %s: \n %r ',
+                          self.connection.peer,
+                          json_answer)
                 await provider.socket.send({
-                    'type': ServerMessageType.Answer,
+                    'type': ServerMessageType.Answer.value,
                     'payload': {
                         'sdp': json_answer,
-                        'type': self.connection.type,
+                        'type': self.connection.type.value,
                         'connectionId': self.connection.connectionId,
                         'browser': util.browser
                         },
@@ -309,9 +306,11 @@ class Negotiator:
             provider.emitError(PeerErrorType.WebRTC, err_1)
             log.exception("Failed to create answer, ", err_1)
 
-    async def handleSDP(self, type: str = None, sdp: str = None) -> None:
+    async def handleSDP(self,
+                        type: ServerMessageType = None,
+                        sdp: dict = None) -> None:
         """Handle an SDP."""
-        rsd = RTCSessionDescription(type=type, sdp=sdp)
+        rsd = RTCSessionDescription(**sdp)
         peerConnection = self.connection.peerConnection
         provider = self.connection.provider
         log.debug("\n Setting remote session description \n %r", rsd)
@@ -320,7 +319,7 @@ class Negotiator:
             log.debug('\n Set remoteDescription type: %s'
                       '\n for peer: %r',
                       type, self.connection.peer)
-            if type == "offer":
+            if type == ServerMessageType.Offer:
                 await self._makeAnswer()
         except Exception as err:
             provider.emitError(PeerErrorType.WebRTC, err)
@@ -335,16 +334,16 @@ class Negotiator:
         peerConnection = self.connection.peerConnection
         provider = self.connection.provider
         try:
-            log.info('Adding ICE candidate for peer id %s',
-                     self.connection.peer)
+            log.debug('Adding ICE candidate for peer id %s',
+                      self.connection.peer)
             rtc_ice_candidate = candidate_from_sdp(candidate)
             rtc_ice_candidate.sdpMid = sdpMid
             rtc_ice_candidate.sdpMLineIndex = sdpMLineIndex
-            log.info('RTCIceCandidate: %r', rtc_ice_candidate)
-            log.info('peerConnection: %r', peerConnection)
+            log.debug('RTCIceCandidate: %r', rtc_ice_candidate)
+            log.debug('peerConnection: %r', peerConnection)
             peerConnection.addIceCandidate(rtc_ice_candidate)
-            log.info('Added ICE candidate for peer %s',
-                     self.connection.peer)
+            log.debug('Added ICE candidate for peer %s',
+                      self.connection.peer)
         except Exception as err:
             provider.emitError(PeerErrorType.WebRTC, err)
             log.exception("Failed to handleCandidate, ", err)

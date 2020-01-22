@@ -109,21 +109,23 @@ class Socket(AsyncIOEventEmitter):
         if self._disconnected:
             return
 
+        log.warning('Socket sending data: \n%r', data)
+
         # If we didn't get an ID yet,
         # we can't yet send anything so we should queue
         # up these messages.
         if not self._id:
             self._messagesQueue.push(data)
             return
-        if not data['type']:
-            self.emit(SocketEventType.Error, "Invalid message")
-            return
+        # if not data['type']:
+        #     self.emit(SocketEventType.Error, "Invalid message")
+        #     return
         if not self._wsOpen():
             log.warning("Signaling websocket closed. Cannot send message %r.",
                         data)
             return
         message = json.dumps(data)
-        log.info('Message sent to signaling server: \n %r', message)
+        log.debug('Message sent to signaling server: \n %r', message)
         await self._websocket.send(message)
 
     async def close(self) -> None:
