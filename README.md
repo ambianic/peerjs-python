@@ -43,7 +43,7 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [ ] Release initial version to PyPi.
 -  [ ] Complete port and test media support.
   
-## Related Open Source projects
+## Other Open Source projects
 
 There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling servers.
 
@@ -51,3 +51,10 @@ There are several great projects that solve the problem of accessing IoT devices
 - [Proxy.py](https://github.com/abhinavsingh/proxy.py): HTTP proxy server written in Python. 
 - [Inlets](https://github.com/inlets/inlets): Reverse proxy and service tunnel written in Go.
 - [Macchina.io](https://github.com/my-devices/sdk): IoT tunneling proxy written in C++.
+
+A few popular p2p projects that use WebRTC:
+
+- [Simple peer](https://github.com/feross/simple-peer)
+- [WebTorrent](https://webtorrent.io/)
+- [Ipfs](https://ipfs.io/)
+- [Matrix](https://matrix.org/)
