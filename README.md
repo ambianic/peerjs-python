@@ -6,8 +6,6 @@ Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Prog
 
 Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
 
-![WebRTC logo](https://webrtc.org/assets/images/webrtc-logo-horiz-retro-300x60.png)
-
 ## Motivation
 
 This project was originally motivated while searching for a way to: 
