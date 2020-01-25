@@ -281,7 +281,7 @@ class DataConnection(BaseConnection):
         #     else:
         #         self._bufferedSend(blob)
         else:
-            log.warning('DataConnection sending data: \n%r', data)
+            # log.debug('DataConnection sending data: \n%r', data)
             await self._bufferedSend(data)
 
     async def _bufferedSend(self, msg: any) -> None:

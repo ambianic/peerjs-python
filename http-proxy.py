@@ -133,7 +133,9 @@ def _setPeerConnectionHandlers(peerConnection):
         request = json.loads(data)
         log.warning('peer http tunnel request: \n%r', request)
         response_content = await _fetch(**request)
-        log.warning('Sending response: \n%r', response_content)
+        log.warning('Answering request: \n%r '
+                    'response: \n%r',
+                    request, response_content)
         await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)
