@@ -131,7 +131,7 @@ def _setPeerConnectionHandlers(peerConnection):
     async def pc_data(data):
         log.warning('data received from remote peer \n%r', data)
         request = json.loads(data)
-        log.warning('peer http tunnel request: \n%r', request)
+        log.warning('webrtc peer: http proxy request: \n%r', request)
         response_content = await _fetch(**request)
         log.warning('Answering request: \n%r '
                     'response: \n%r',
