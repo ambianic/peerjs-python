@@ -49,10 +49,19 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: 12.x
-    - name: Semantic Release
+    - name: Install Semantic Release Tool
+      run: |
+            npm install --save-dev semantic-release
+            npm install --save-dev @semantic-release/commit-analyzer
+            npm install --save-dev @semantic-release/git
+            npm install --save-dev @semantic-release/release-notes-generator
+            npm install --save-dev @semantic-release/github
+            npm install --save-dev @semantic-release/changelog
+            npm install --save-dev @semantic-release/exec
+    - name: Run Semantic Release
       run: npx semantic-release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-    - name: Run a one-line script
+    - name: Semantic release completed
       run: echo Semantic release flow completed
