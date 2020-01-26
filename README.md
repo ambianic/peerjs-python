@@ -4,7 +4,11 @@ Python port of [PeerJS](https://github.com/peers) client. Tracked in issue [#160
 
 Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
 
-Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider.
+Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider. This requires installing a few native dependencies for audio/video media processing.
+
+```
+apt install libavdevice-dev libavfilter-dev libopus-dev libvpx-dev pkg-config
+```
 
 ## Motivation
 
