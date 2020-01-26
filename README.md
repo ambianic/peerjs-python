@@ -6,8 +6,13 @@ Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Prog
 
 Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider. This requires installing a few native dependencies for audio/video media processing.
 
+On Debian/Ubuntu run:
 ```
 apt install libavdevice-dev libavfilter-dev libopus-dev libvpx-dev pkg-config
+```
+On OS X run:
+```
+brew install ffmpeg opus libvpx pkg-config
 ```
 
 ## Motivation
