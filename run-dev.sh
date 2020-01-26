@@ -20,4 +20,4 @@ if [ 2 -gt $SETUP_PY_MOD ] || [ 2 -gt $SETUP_CFG_MOD ]; then
   pip3 install --editable src
 fi
 
-python3 $SCRIPTPATH/cli.py
+python3 $SCRIPTPATH/http-proxy.py

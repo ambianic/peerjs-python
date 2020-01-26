@@ -4,7 +4,8 @@ import asyncio
 import logging
 import sys
 import json
-
+import requests
+from typing import Any
 import coloredlogs
 
 # from aiortc import RTCIceCandidate, RTCSessionDescription
@@ -107,6 +108,19 @@ def _setPnPServiceConnectionHandlers(peer=None):
         _setPeerConnectionHandlers(peerConnection)
 
 
+async def _fetch(url: str = None, method: str = 'GET') -> Any:
+    if method == 'GET':
+        response = requests.get(url)
+        response_content = response.content
+        # response_content = {'name': 'Ambianic-Edge', 'version': '1.24.2020'}
+        # rjson = json.dumps(response_content)
+        return response_content
+    else:
+        raise NotImplementedError(
+            f'HTTP method ${method} not implemented.'
+            ' Contributions welcome!')
+
+
 def _setPeerConnectionHandlers(peerConnection):
     @peerConnection.on(ConnectionEventType.Open)
     async def pc_open():
@@ -116,10 +130,13 @@ def _setPeerConnectionHandlers(peerConnection):
     @peerConnection.on(ConnectionEventType.Data)
     async def pc_data(data):
         log.warning('data received from remote peer \n%r', data)
-        response = {'name': 'Ambianic-Edge', 'version': '1.0.2020'}
-        rjson = json.dumps(response)
-        log.warning('Sending response: \n%r', rjson)
-        await peerConnection.send(rjson)
+        request = json.loads(data)
+        log.warning('webrtc peer: http proxy request: \n%r', request)
+        response_content = await _fetch(**request)
+        log.warning('Answering request: \n%r '
+                    'response size: \n%r',
+                    request, len(response_content))
+        await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)
     async def pc_close():

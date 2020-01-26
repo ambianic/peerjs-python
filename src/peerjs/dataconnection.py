@@ -126,7 +126,7 @@ class DataConnection(BaseConnection):
         async def on_datachannel_open():
             log.debug(f'DC#${self.connectionId} dc connection success')
             log.debug('DataChannel open. Transport capabilities: \n%r',
-                      self.dataChannel.transport.getCapabilities())
+                        self.dataChannel.transport.getCapabilities())
             self._open = True
             self.emit(ConnectionEventType.Open)
 
@@ -137,8 +137,9 @@ class DataConnection(BaseConnection):
             await on_datachannel_open()
 
         @self.dataChannel.on('message')
-        async def on_datachannel_message(e):
-            await self._handleDataMessage(e)
+        async def on_datachannel_message(msg):
+            log.debug(f'DC#${self.connectionId} received message')
+            await self._handleDataMessage(msg)
 
         @self.dataChannel.on('close')
         async def on_datachannel_close():
@@ -147,9 +148,9 @@ class DataConnection(BaseConnection):
 
     async def _handleDataMessage(self, data) -> None:
         """Handle a DataChannel message."""
-        log.warning('\n Received data (type %s) from remote peer: \n%r',
-                    type(data),
-                    data)
+        log.debug('\n Received data (type %s) from remote peer: \n%r',
+                  type(data),
+                  data)
         log.debug('Serialization type: %s', self.serialization)
         isBinarySerialization = \
             self.serialization == SerializationType.Binary or \
@@ -246,7 +247,7 @@ class DataConnection(BaseConnection):
 
     async def send(self, data, chunked: bool = False) -> None:
         """Send data to the peer on the other side of this connection."""
-        log.warning('DataConnection entered send(data): \n%r', data)
+        log.debug('DataConnection entered send(data): \n%r', data)
         if not self.open:
             log.warning('DataConnection not open')
             self.emit(
@@ -259,7 +260,7 @@ class DataConnection(BaseConnection):
             )
             return
 
-        log.warning('Serialization: %r', self.serialization)
+        log.debug('Serialization: %r', self.serialization)
 
         if self.serialization == SerializationType.JSON:
             log.warning('DataConnection sending JSON data: \n%r', data)
@@ -281,7 +282,7 @@ class DataConnection(BaseConnection):
         #     else:
         #         self._bufferedSend(blob)
         else:
-            log.warning('DataConnection sending data: \n%r', data)
+            # log.debug('DataConnection sending data: \n%r', data)
             await self._bufferedSend(data)
 
     async def _bufferedSend(self, msg: any) -> None:
