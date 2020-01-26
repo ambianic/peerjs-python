@@ -7,6 +7,7 @@ import json
 import requests
 from typing import Any
 import coloredlogs
+from pathlib import Path
 
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
@@ -21,7 +22,10 @@ log = logging.getLogger(__name__)
 LOG_LEVEL = logging.INFO
 
 peer = None
-myPeerId = None
+savedPeerId = None
+# persisted config dict
+config = {}
+CONFIG_FILE = '.peerjsrc'
 AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'  # 'localhost'
 AMBIANIC_PNP_PORT = 443  # 9779
 AMBIANIC_PNP_SECURE = True  # False
@@ -55,37 +59,56 @@ async def join_peer_room(peer=None):
     log.debug('myRoom members %r', peerIds)
 
 
+def _savePeerId(peerId=None):
+    assert peerId
+    global savedPeerId
+    savedPeerId = peerId
+    config['peerId'] = peerId
+    with open(CONFIG_FILE, 'w') as outfile:
+        json.dump(config, outfile)
+
+
+def _loadConfig():
+    global config
+    global savedPeerId
+    conf_file = Path(CONFIG_FILE)
+    if conf_file.exists():
+        with conf_file.open() as infile:
+            config = json.load(infile)
+        savedPeerId = config.get('peerId', None)
+
+
 def _setPnPServiceConnectionHandlers(peer=None):
     assert peer
-    global myPeerId
+    global savedPeerId
     @peer.on(PeerEventType.Open)
     async def peer_open(id):
         log.warning('Peer signaling connection open.')
-        global myPeerId
+        global savedPeerId
         # Workaround for peer.reconnect deleting previous id
         if peer.id is None:
             log.warning('pnpService: Received null id from peer open')
-            peer.id = myPeerId
+            peer.id = savedPeerId
         else:
-            if myPeerId != peer.id:
+            if savedPeerId != peer.id:
                 log.info(
                     'PNP Service returned new peerId. Old %s, New %s',
-                    myPeerId,
+                    savedPeerId,
                     peer.id
                     )
-            myPeerId = peer.id
-        log.info('myPeerId: %s', peer.id)
+            _savePeerId(peer.id)
+        log.info('savedPeerId: %s', peer.id)
 
     @peer.on(PeerEventType.Disconnected)
     async def peer_disconnected(peerId):
-        global myPeerId
+        global savedPeerId
         log.info('pnpService: Peer %s disconnected from server.', peerId)
         # Workaround for peer.reconnect deleting previous id
         if not peer.id:
             log.info('BUG WORKAROUND: Peer lost ID. '
                      'Resetting to last known ID.')
-            peer._id = myPeerId
-        peer._lastServerId = myPeerId
+            peer._id = savedPeerId
+        peer._lastServerId = savedPeerId
         await peer.reconnect()
 
     @peer.on(PeerEventType.Close)
@@ -155,8 +178,8 @@ async def pnp_service_connect() -> Peer:
     # If we already have an assigned peerId, we will reuse it forever.
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
-    global myPeerId
-    log.info('last saved myPeerId %s', myPeerId)
+    global savedPeerId
+    log.info('last saved savedPeerId %s', savedPeerId)
     new_token = util.randomToken()
     log.info('Peer session token %s', new_token)
     options = PeerOptions(
@@ -165,7 +188,7 @@ async def pnp_service_connect() -> Peer:
         secure=AMBIANIC_PNP_SECURE,
         token=new_token
     )
-    peer = Peer(id=myPeerId, peer_options=options)
+    peer = Peer(id=savedPeerId, peer_options=options)
     log.info('pnpService: peer created with id %s , options: %r',
              peer.id,
              peer.options)
@@ -224,6 +247,7 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
+    _loadConfig()
     _config_logger()
     # add formatter to ch
     log.debug('Log level set to debug')
