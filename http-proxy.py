@@ -134,8 +134,8 @@ def _setPeerConnectionHandlers(peerConnection):
         log.warning('webrtc peer: http proxy request: \n%r', request)
         response_content = await _fetch(**request)
         log.warning('Answering request: \n%r '
-                    'response: \n%r',
-                    request, response_content)
+                    'response size: \n%r',
+                    request, len(response_content))
         await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)

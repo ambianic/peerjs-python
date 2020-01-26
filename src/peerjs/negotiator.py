@@ -84,25 +84,6 @@ class Negotiator:
 
         # ICE CANDIDATES.
         log.debug("Listening for ICE candidates.")
-        # Its not clear yet how aiortc supports trickle ice.
-        # Open issue: https://github.com/aiortc/aiortc/issues/246
-        # def peerconn_onicecandidate
-        # peerConnection.onicecandidate = (evt) => {
-        #     if (!evt.candidate || !evt.candidate.candidate) return;
-        #
-        #     logger.log(`Received ICE candidates for ${peerId}:`,
-        #               evt.candidate)
-        #
-        #       provider.socket.send({
-        #         type: ServerMessageType.Candidate,
-        #         payload: {
-        #           candidate: evt.candidate,
-        #           type: connectionType,
-        #           connectionId: connectionId
-        #         },
-        #         dst: peerId
-        #       });
-        #     };
 
         @peerConnection.on('icegatheringstatechange')
         def peerconn_icegatheringstatechange():
