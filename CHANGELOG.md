@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.0.9](https://github.com/ambianic/peerjs-python/compare/v1.0.8...v1.0.9) (2020-01-28)
+
+
+### Bug Fixes
+
+* update docs to reflect pypi release ([e684daf](https://github.com/ambianic/peerjs-python/commit/e684daf02cb4a0aaff66b533c764fb5a8f6154a5))
+
 ## [1.0.8](https://github.com/ambianic/peerjs-python/compare/v1.0.7...v1.0.8) (2020-01-28)
 
 
