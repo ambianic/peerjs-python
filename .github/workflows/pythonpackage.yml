@@ -65,7 +65,7 @@ jobs:
     - name: Run Semantic Release
       run: npx semantic-release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     - name: Semantic release completed
       run: echo Semantic release flow completed
