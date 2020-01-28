@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.0.8](https://github.com/ambianic/peerjs-python/compare/v1.0.7...v1.0.8) (2020-01-28)
+
+
+### Bug Fixes
+
+* Include PnP and HTTP Proxy features in README ([eaa9fbc](https://github.com/ambianic/peerjs-python/commit/eaa9fbc715d5dd9abe17a4a6f98c63e45ff40133))
+
 ## [1.0.7](https://github.com/ambianic/peerjs-python/compare/v1.0.6...v1.0.7) (2020-01-28)
 
 
