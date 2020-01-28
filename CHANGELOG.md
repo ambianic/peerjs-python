@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.0.3](https://github.com/ambianic/peerjs-python/compare/v1.0.2...v1.0.3) (2020-01-28)
+
+
+### Bug Fixes
+
+* pypi dev status classifier ([e8c773a](https://github.com/ambianic/peerjs-python/commit/e8c773a5b837b01c792bb2561c43d0e09177aae2))
+
 ## [1.0.2](https://github.com/ambianic/peerjs-python/compare/v1.0.1...v1.0.2) (2020-01-28)
 
 
