@@ -3,6 +3,7 @@
 # verbose mode
 set -x
 
+
 RELEASE_VERSION=$1
 a=( ${RELEASE_VERSION//./ } )
 MAJOR=${a[0]}
