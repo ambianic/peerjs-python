@@ -1,5 +1,14 @@
 # Semantic Versioning Changelog
 
+## [1.0.4](https://github.com/ambianic/peerjs-python/compare/v1.0.3...v1.0.4) (2020-01-28)
+
+
+### Bug Fixes
+
+* license classifier ([e0bb252](https://github.com/ambianic/peerjs-python/commit/e0bb252d8c449a6cbaece8ac90c852984dd71610))
+* merge branch 'master' into dev ([7a57aba](https://github.com/ambianic/peerjs-python/commit/7a57abaa2fcddb7269f1c82e88430953a329a4df))
+* setup.cfg deps ([20a4c77](https://github.com/ambianic/peerjs-python/commit/20a4c77a1e3ba2efd99b8ad3dc14f5d042e6f28b))
+
 ## [1.0.3](https://github.com/ambianic/peerjs-python/compare/v1.0.2...v1.0.3) (2020-01-28)
 
 
