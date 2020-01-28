@@ -1,8 +1,18 @@
 # peerjs-python
 
-Python port of [PeerJS](https://github.com/peers) client. Tracked in issue [#160](https://github.com/peers/peerjs/issues/610) of the official PeerJS project.
+Python port of [PeerJS](https://github.com/peers) client. 
+  - Tracked in issue [#160](https://github.com/peers/peerjs/issues/610) of the official PeerJS project.
 
 Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) to discover and pair directly with Python apps using secure, browser supported [WebRTC](https://webrtc.org/) protocol. 
+
+## Additional features:
+
+- *HTTP Proxy* over WebRTC data channel. It allows PeerJS browser clients to make remote REST requests over WebRTC to a local REST API running behind a firewall.
+- *Plug-and-play* functionality that allows seamless Airdrop-like pairing between peers running on the same local network.
+
+See Ambianic UI [PNP module](https://github.com/ambianic/ambianic-ui/blob/master/src/store/pnp.js) for a real-world example how PeerJS Python is used with PnP and HTTP Proxy.
+
+## Dependencies
 
 Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider. This requires installing a few native dependencies for audio/video media processing.
 
