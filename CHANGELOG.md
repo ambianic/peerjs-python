@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.0.1](https://github.com/ambianic/peerjs-python/compare/v1.0.0...v1.0.1) (2020-01-28)
+
+
+### Bug Fixes
+
+* publish action trigger ([ef7ffa1](https://github.com/ambianic/peerjs-python/commit/ef7ffa15bbffb22681ef748ea5b229a80803357e))
+
 # 1.0.0 (2020-01-28)
 
 
