@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.0.5](https://github.com/ambianic/peerjs-python/compare/v1.0.4...v1.0.5) (2020-01-28)
+
+
+### Bug Fixes
+
+* pypi classisifer topic ([f06ce5a](https://github.com/ambianic/peerjs-python/commit/f06ce5aa172f6c0dc1fea5bdc65fdc820190fdc3))
+
 ## [1.0.4](https://github.com/ambianic/peerjs-python/compare/v1.0.3...v1.0.4) (2020-01-28)
 
 
