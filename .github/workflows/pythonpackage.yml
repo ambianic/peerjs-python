@@ -45,10 +45,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Use Node.js 
+    - name: Install Node.js 12
       uses: actions/setup-node@v1
       with:
         node-version: 12.x
+    - name: Install Python 3
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
     - name: Install Semantic Release Tool
       run: |
             npm install --save-dev semantic-release
