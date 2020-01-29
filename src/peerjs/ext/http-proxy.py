@@ -33,6 +33,10 @@ time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
 
+# flags when user requests shutdown
+# via CTRL+C or another system signal
+_shutdown: bool = False
+
 
 # async def _consume_signaling(pc, signaling):
 #     while True:
@@ -102,14 +106,16 @@ def _setPnPServiceConnectionHandlers(peer=None):
     @peer.on(PeerEventType.Disconnected)
     async def peer_disconnected(peerId):
         global savedPeerId
-        log.info('pnpService: Peer %s disconnected from server.', peerId)
+        log.info('Peer %s disconnected from server.', peerId)
         # Workaround for peer.reconnect deleting previous id
         if not peer.id:
-            log.info('BUG WORKAROUND: Peer lost ID. '
-                     'Resetting to last known ID.')
+            log.debug('BUG WORKAROUND: Peer lost ID. '
+                      'Resetting to last known ID.')
             peer._id = savedPeerId
         peer._lastServerId = savedPeerId
-        await peer.reconnect()
+        global _shutdown
+        if not _shutdown:
+            await peer.reconnect()
 
     @peer.on(PeerEventType.Close)
     def peer_close():
@@ -201,7 +207,8 @@ async def pnp_service_connect() -> Peer:
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
     assert peer
-    while True:
+    global _shutdown
+    while not _shutdown:
         log.debug('Making peer discoverable.')
         try:
             # check if the websocket connection
@@ -239,6 +246,17 @@ def _config_logger():
     coloredlogs.install(level=LOG_LEVEL, fmt=format_cfg)
 
 
+def _shutdown():
+    global _shutdown
+    _shutdown = True
+    loop = asyncio.get_event_loop()
+    if peer:
+        loop.run_until_complete(peer.destroy())
+    # loop.run_until_complete(pc.close())
+    # loop.run_until_complete(signaling.close())
+    loop.close()
+
+
 if __name__ == "__main__":
     # args = None
     # parser = argparse.ArgumentParser(description="Data channels ping/pong")
@@ -263,11 +281,9 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(coro())
+        loop.run_forever()
     except KeyboardInterrupt:
-        log.info('KeyboardInterrupt detected. Exiting...')
-        pass
+        log.info('KeyboardInterrupt detected.')
     finally:
-        if peer:
-            loop.run_until_complete(peer.destroy())
-        # loop.run_until_complete(pc.close())
-        # loop.run_until_complete(signaling.close())
+        log.info('Shutting down...')
+        _shutdown()
