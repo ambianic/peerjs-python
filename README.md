@@ -60,7 +60,7 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [ ] >90% code coverage with CI tests.
 -  [ ] Port media support.
   
-## Other Open Source projects
+## Other Related Open Source projects
 
 There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling servers.
 
