@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.1.2](https://github.com/ambianic/peerjs-python/compare/v1.1.1...v1.1.2) (2020-01-29)
+
+
+### Bug Fixes
+
+* use find_namespace: to include python code in package ([204a13b](https://github.com/ambianic/peerjs-python/commit/204a13b58b35e9e500799eda68e86545af66c6a4))
+
 ## [1.1.1](https://github.com/ambianic/peerjs-python/compare/v1.1.0...v1.1.1) (2020-01-29)
 
 
