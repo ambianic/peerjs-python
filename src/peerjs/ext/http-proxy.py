@@ -35,7 +35,7 @@ discoveryLoop = None
 
 # flags when user requests shutdown
 # via CTRL+C or another system signal
-_shutdown: bool = False
+_is_shutting_down: bool = False
 
 
 # async def _consume_signaling(pc, signaling):
@@ -60,7 +60,7 @@ async def join_peer_room(peer=None):
     myRoom = PeerRoom(peer)
     log.debug('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
-    log.debug('myRoom members %r', peerIds)
+    log.info('myRoom members %r', peerIds)
 
 
 def _savePeerId(peerId=None):
@@ -113,8 +113,8 @@ def _setPnPServiceConnectionHandlers(peer=None):
                       'Resetting to last known ID.')
             peer._id = savedPeerId
         peer._lastServerId = savedPeerId
-        global _shutdown
-        if not _shutdown:
+        global _is_shutting_down
+        if not _is_shutting_down:
             await peer.reconnect()
 
     @peer.on(PeerEventType.Close)
@@ -201,15 +201,20 @@ async def pnp_service_connect() -> Peer:
     await peer.start()
     log.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
+    log.info('Calling make_discoverable')
     await make_discoverable(peer=peer)
+    log.info('Exited make_discoverable')
 
 
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
+    log.debug('Enter peer discoverable.')
     assert peer
-    global _shutdown
-    while not _shutdown:
-        log.debug('Making peer discoverable.')
+    log.debug('Before _is_shutting_down')
+    global _is_shutting_down
+    log.debug('Making peer discoverable.')
+    while not _is_shutting_down:
+        log.debug('Discovery loop.')
         try:
             # check if the websocket connection
             # to the signaling server is alive
@@ -247,8 +252,8 @@ def _config_logger():
 
 
 def _shutdown():
-    global _shutdown
-    _shutdown = True
+    global _is_shutting_down
+    _is_shutting_down = True
     loop = asyncio.get_event_loop()
     if peer:
         loop.run_until_complete(peer.destroy())
