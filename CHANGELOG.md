@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.1.1](https://github.com/ambianic/peerjs-python/compare/v1.1.0...v1.1.1) (2020-01-29)
+
+
+### Bug Fixes
+
+* remove msgpack dependency ([9dc5b03](https://github.com/ambianic/peerjs-python/commit/9dc5b034ccada4aefcc14800b13b6d0afa5eb897))
+
 # [1.1.0](https://github.com/ambianic/peerjs-python/compare/v1.0.9...v1.1.0) (2020-01-29)
 
 
