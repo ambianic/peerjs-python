@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.1.3](https://github.com/ambianic/peerjs-python/compare/v1.1.2...v1.1.3) (2020-01-30)
+
+
+### Bug Fixes
+
+* polish shutdown sequence ([161394c](https://github.com/ambianic/peerjs-python/commit/161394ccc4ee3f03f592fa45902bbea03a3eab2f))
+
 ## [1.1.2](https://github.com/ambianic/peerjs-python/compare/v1.1.1...v1.1.2) (2020-01-29)
 
 
