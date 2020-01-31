@@ -109,7 +109,7 @@ class Socket(AsyncIOEventEmitter):
         if self._disconnected:
             return
 
-        log.warning('Socket sending data: \n%r', data)
+        log.debug('Socket sending data: \n%r', data)
 
         # If we didn't get an ID yet,
         # we can't yet send anything so we should queue

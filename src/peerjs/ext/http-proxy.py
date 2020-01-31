@@ -87,11 +87,11 @@ def _setPnPServiceConnectionHandlers(peer=None):
     global savedPeerId
     @peer.on(PeerEventType.Open)
     async def peer_open(id):
-        log.warning('Peer signaling connection open.')
+        log.info('Peer signaling connection open.')
         global savedPeerId
         # Workaround for peer.reconnect deleting previous id
         if peer.id is None:
-            log.warning('pnpService: Received null id from peer open')
+            log.info('pnpService: Received null id from peer open')
             peer.id = savedPeerId
         else:
             if savedPeerId != peer.id:
@@ -120,7 +120,7 @@ def _setPnPServiceConnectionHandlers(peer=None):
     @peer.on(PeerEventType.Close)
     def peer_close():
         # peerConnection = null
-        log.warning('Peer connection closed')
+        log.info('Peer connection closed')
 
     @peer.on(PeerEventType.Error)
     def peer_error(err):
@@ -133,7 +133,7 @@ def _setPnPServiceConnectionHandlers(peer=None):
     # remote peer tries to initiate connection
     @peer.on(PeerEventType.Connection)
     async def peer_connection(peerConnection):
-        log.warning('Remote peer trying to establish connection')
+        log.info('Remote peer trying to establish connection')
         _setPeerConnectionHandlers(peerConnection)
 
 
@@ -153,18 +153,18 @@ async def _fetch(url: str = None, method: str = 'GET') -> Any:
 def _setPeerConnectionHandlers(peerConnection):
     @peerConnection.on(ConnectionEventType.Open)
     async def pc_open():
-        log.warning('Connected to: %s', peerConnection.peer)
+        log.info('Connected to: %s', peerConnection.peer)
 
     # Handle incoming data (messages only since this is the signal sender)
     @peerConnection.on(ConnectionEventType.Data)
     async def pc_data(data):
-        log.warning('data received from remote peer \n%r', data)
+        log.debug('data received from remote peer \n%r', data)
         request = json.loads(data)
-        log.warning('webrtc peer: http proxy request: \n%r', request)
+        log.info('webrtc peer: http proxy request: \n%r', request)
         response_content = await _fetch(**request)
-        log.warning('Answering request: \n%r '
-                    'response size: \n%r',
-                    request, len(response_content))
+        log.info('Answering request: \n%r '
+                 'response size: \n%r',
+                 request, len(response_content))
         await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)
