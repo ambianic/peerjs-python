@@ -211,7 +211,7 @@ class Peer(AsyncIOEventEmitter):
         def _on_server_open():
             self._lastServerId = self.id
             self._open = True
-            log.warning('Signaling server connection open.')
+            log.info('Signaling server connection open.')
             self.emit(PeerEventType.Open, self.id)
 
         # Server error.
