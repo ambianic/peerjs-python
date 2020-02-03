@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.1.5](https://github.com/ambianic/peerjs-python/compare/v1.1.4...v1.1.5) (2020-02-03)
+
+
+### Bug Fixes
+
+* logging levels ([fffcdd4](https://github.com/ambianic/peerjs-python/commit/fffcdd4c71b950b98e212481d30178cce7e83bd1))
+
 ## [1.1.4](https://github.com/ambianic/peerjs-python/compare/v1.1.3...v1.1.4) (2020-02-01)
 
 
