@@ -155,8 +155,8 @@ class DataConnection(BaseConnection):
         isBinarySerialization = \
             self.serialization == SerializationType.Binary or \
             self.serialization == SerializationType.BinaryUTF8
-        log.warning('isBinarySerialization: %r',
-                    isBinarySerialization)
+        log.debug('isBinarySerialization: %r',
+                  isBinarySerialization)
         deserializedData = data
         # Peerjs JavaScript version uses a messagepack library
         #   which is not ported to Python yet
