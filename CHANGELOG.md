@@ -1,5 +1,33 @@
 # Semantic Versioning Changelog
 
+## [1.1.5](https://github.com/ambianic/peerjs-python/compare/v1.1.4...v1.1.5) (2020-02-03)
+
+
+### Bug Fixes
+
+* logging levels ([fffcdd4](https://github.com/ambianic/peerjs-python/commit/fffcdd4c71b950b98e212481d30178cce7e83bd1))
+
+## [1.1.4](https://github.com/ambianic/peerjs-python/compare/v1.1.3...v1.1.4) (2020-02-01)
+
+
+### Bug Fixes
+
+* log levels throughout code ([c4c5836](https://github.com/ambianic/peerjs-python/commit/c4c5836efdefbc5a80ba355c288c9717d188d7d9))
+
+## [1.1.3](https://github.com/ambianic/peerjs-python/compare/v1.1.2...v1.1.3) (2020-01-30)
+
+
+### Bug Fixes
+
+* polish shutdown sequence ([161394c](https://github.com/ambianic/peerjs-python/commit/161394ccc4ee3f03f592fa45902bbea03a3eab2f))
+
+## [1.1.2](https://github.com/ambianic/peerjs-python/compare/v1.1.1...v1.1.2) (2020-01-29)
+
+
+### Bug Fixes
+
+* use find_namespace: to include python code in package ([204a13b](https://github.com/ambianic/peerjs-python/commit/204a13b58b35e9e500799eda68e86545af66c6a4))
+
 ## [1.1.1](https://github.com/ambianic/peerjs-python/compare/v1.1.0...v1.1.1) (2020-01-29)
 
 
