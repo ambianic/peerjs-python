@@ -126,7 +126,7 @@ class DataConnection(BaseConnection):
         async def on_datachannel_open():
             log.debug(f'DC#${self.connectionId} dc connection success')
             log.debug('DataChannel open. Transport capabilities: \n%r',
-                        self.dataChannel.transport.getCapabilities())
+                      self.dataChannel.transport.getCapabilities())
             self._open = True
             self.emit(ConnectionEventType.Open)
 
