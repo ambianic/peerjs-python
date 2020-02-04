@@ -403,7 +403,7 @@ class Peer(AsyncIOEventEmitter):
         """Add a data/media connection to this peer."""
         log.debug(f"add connection ${connection.type}:"
                   f"${connection.connectionId} to peerId:${peerId}")
-        if not peerId in self._connections:
+        if peerId not in self._connections:
             self._connections[peerId] = []
         self._connections[peerId].append(connection)
 
@@ -414,8 +414,9 @@ class Peer(AsyncIOEventEmitter):
                 connections.remove(connection)
             except ValueError as err:
                 log.warning('Error removing connection peer id %s. '
-                            'Connection not found in managed connections list.',
-                            connection.peer)
+                            'Connection not found in managed connections list.'
+                            '\n%r',
+                            connection.peer, err)
         # remove from lost messages
         self._lostMessages.pop(connection.connectionId, None)
 
