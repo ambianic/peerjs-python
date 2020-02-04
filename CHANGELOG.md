@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.1.6](https://github.com/ambianic/peerjs-python/compare/v1.1.5...v1.1.6) (2020-02-04)
+
+
+### Bug Fixes
+
+* minor logging cleanup ([d8ed1d4](https://github.com/ambianic/peerjs-python/commit/d8ed1d48a2863158a3ece540de0e7733ac001cdc))
+* pyav version dependency ([6aad177](https://github.com/ambianic/peerjs-python/commit/6aad1773ed28757b137169ef20275dd5911952d1))
+
 ## [1.1.5](https://github.com/ambianic/peerjs-python/compare/v1.1.4...v1.1.5) (2020-02-03)
 
 
