@@ -140,17 +140,27 @@ def _setPnPServiceConnectionHandlers(peer=None):
 async def _fetch(url: str = None, method: str = 'GET') -> Any:
     if method == 'GET':
         response = requests.get(url)
-        response_content = response.content
         # response_content = {'name': 'Ambianic-Edge', 'version': '1.24.2020'}
         # rjson = json.dumps(response_content)
-        return response_content
+        return response
     else:
         raise NotImplementedError(
             f'HTTP method ${method} not implemented.'
             ' Contributions welcome!')
 
 
+async def _pong(peerConnection):
+    response_header = {
+        'status': 200,
+    }
+    header_as_json = json.dumps(response_header)
+    log.debug('sending keepalive pong back to remote peer')
+    await peerConnection.send(header_as_json)
+    await peerConnection.send('pong')
+
+
 def _setPeerConnectionHandlers(peerConnection):
+
     @peerConnection.on(ConnectionEventType.Open)
     async def pc_open():
         log.info('Connected to: %s', peerConnection.peer)
@@ -160,11 +170,57 @@ def _setPeerConnectionHandlers(peerConnection):
     async def pc_data(data):
         log.debug('data received from remote peer \n%r', data)
         request = json.loads(data)
+        # check if the request is just a keepalive ping
+        if (request['url'].startswith('ping')):
+            log.debug('received keepalive ping from remote peer')
+            await _pong(peerConnection=peerConnection)
+            return
         log.info('webrtc peer: http proxy request: \n%r', request)
-        response_content = await _fetch(**request)
+        # schedule frequent pings while waiting on response_header
+        # to keep the peer data channel open
+        waiting_on_fetch = asyncio.Event()
+
+        async def ping(stop_flag=None):
+            while not stop_flag.is_set():
+                # send HTTP 202 Accepted status code to inform
+                # client that we are still waiting on the http
+                # server to complete its response
+                ping_as_json = json.dumps({'status': 202})
+                await peerConnection.send(ping_as_json)
+                log.info('webrtc peer: http proxy response ping. '
+                         'Keeping datachannel alive.')
+                await asyncio.sleep(1)
+
+        asyncio.create_task(ping(waiting_on_fetch))
+        response = None
+        try:
+            response = await _fetch(**request)
+        except Exception as e:
+            log.exception('Error %s while fetching response'
+                          ' with request: \n %r',
+                          e, request)
+        finally:
+            # fetch completed, cancel pings
+            waiting_on_fetch.set()
+        if not response:
+            response_header = {
+                # internal server error code
+                'status': 500
+            }
+            response_content = None
+            return
+        response_content = response.content
+        response_header = {
+            'status': response.status_code,
+            'content-type': response.headers['content-type'],
+            'encoding': response.encoding,
+            'content-length': len(response_content)
+        }
         log.info('Answering request: \n%r '
-                 'response size: \n%r',
-                 request, len(response_content))
+                 'response header: \n %r',
+                 request, response_header)
+        header_as_json = json.dumps(response_header)
+        await peerConnection.send(header_as_json)
         await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)
