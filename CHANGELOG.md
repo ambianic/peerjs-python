@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.2.0](https://github.com/ambianic/peerjs-python/compare/v1.1.6...v1.2.0) (2020-02-12)
+
+
+### Features
+
+* more robust datachannel management ([8755cfc](https://github.com/ambianic/peerjs-python/commit/8755cfc4086b5c84d7b61cbe1466d42422360717))
+
 ## [1.1.6](https://github.com/ambianic/peerjs-python/compare/v1.1.5...v1.1.6) (2020-02-04)
 
 
