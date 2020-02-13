@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.2.1](https://github.com/ambianic/peerjs-python/compare/v1.2.0...v1.2.1) (2020-02-13)
+
+
+### Bug Fixes
+
+* switched to aiohttp for more robust webrtc connectivity ([20f12e2](https://github.com/ambianic/peerjs-python/commit/20f12e23632f3f9b2d3041a785a9361f0c56cd2f))
+
 # [1.2.0](https://github.com/ambianic/peerjs-python/compare/v1.1.6...v1.2.0) (2020-02-12)
 
 
