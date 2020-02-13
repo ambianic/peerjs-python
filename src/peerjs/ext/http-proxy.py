@@ -4,7 +4,7 @@ import asyncio
 import logging
 import sys
 import json
-import requests
+import aiohttp
 from typing import Any
 import coloredlogs
 from pathlib import Path
@@ -32,7 +32,8 @@ AMBIANIC_PNP_SECURE = True  # False
 time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
-
+# aiohttp session reusable throghout the http proxy lifecycle
+http_session = None
 # flags when user requests shutdown
 # via CTRL+C or another system signal
 _is_shutting_down: bool = False
@@ -138,25 +139,39 @@ def _setPnPServiceConnectionHandlers(peer=None):
 
 
 async def _fetch(url: str = None, method: str = 'GET') -> Any:
+    global http_session
     if method == 'GET':
-        response = requests.get(url)
+        async with http_session.get(url) as response:
+            content = await response.read()
         # response_content = {'name': 'Ambianic-Edge', 'version': '1.24.2020'}
         # rjson = json.dumps(response_content)
-        return response
+        return response, content
     else:
         raise NotImplementedError(
             f'HTTP method ${method} not implemented.'
             ' Contributions welcome!')
 
 
-async def _pong(peerConnection):
+async def _pong(peer_connection=None):
     response_header = {
         'status': 200,
     }
     header_as_json = json.dumps(response_header)
     log.debug('sending keepalive pong back to remote peer')
-    await peerConnection.send(header_as_json)
-    await peerConnection.send('pong')
+    await peer_connection.send(header_as_json)
+    await peer_connection.send('pong')
+
+
+async def _ping(peer_connection=None, stop_flag=None):
+    while not stop_flag.is_set():
+        # send HTTP 202 Accepted status code to inform
+        # client that we are still waiting on the http
+        # server to complete its response
+        ping_as_json = json.dumps({'status': 202})
+        await peer_connection.send(ping_as_json)
+        log.info('webrtc peer: http proxy response ping. '
+                 'Keeping datachannel alive.')
+        await asyncio.sleep(1)
 
 
 def _setPeerConnectionHandlers(peerConnection):
@@ -173,28 +188,18 @@ def _setPeerConnectionHandlers(peerConnection):
         # check if the request is just a keepalive ping
         if (request['url'].startswith('ping')):
             log.debug('received keepalive ping from remote peer')
-            await _pong(peerConnection=peerConnection)
+            await _pong(peer_connection=peerConnection)
             return
         log.info('webrtc peer: http proxy request: \n%r', request)
         # schedule frequent pings while waiting on response_header
         # to keep the peer data channel open
         waiting_on_fetch = asyncio.Event()
 
-        async def ping(stop_flag=None):
-            while not stop_flag.is_set():
-                # send HTTP 202 Accepted status code to inform
-                # client that we are still waiting on the http
-                # server to complete its response
-                ping_as_json = json.dumps({'status': 202})
-                await peerConnection.send(ping_as_json)
-                log.info('webrtc peer: http proxy response ping. '
-                         'Keeping datachannel alive.')
-                await asyncio.sleep(1)
-
-        asyncio.create_task(ping(waiting_on_fetch))
+        asyncio.create_task(_ping(peer_connection=peerConnection,
+                                  stop_flag=waiting_on_fetch))
         response = None
         try:
-            response = await _fetch(**request)
+            response, content = await _fetch(**request)
         except Exception as e:
             log.exception('Error %s while fetching response'
                           ' with request: \n %r',
@@ -209,13 +214,13 @@ def _setPeerConnectionHandlers(peerConnection):
             }
             response_content = None
             return
-        response_content = response.content
+        response_content = content
         response_header = {
-            'status': response.status_code,
+            'status': response.status,
             'content-type': response.headers['content-type'],
-            'encoding': response.encoding,
             'content-length': len(response_content)
         }
+        log.info('Proxy fetched response with headers: \n%r', response.headers)
         log.info('Answering request: \n%r '
                  'response header: \n %r',
                  request, response_header)
@@ -307,15 +312,21 @@ def _config_logger():
     coloredlogs.install(level=LOG_LEVEL, fmt=format_cfg)
 
 
-def _shutdown():
+async def _start():
+    global http_session
+    http_session = aiohttp.ClientSession()
+    await pnp_service_connect()
+
+
+async def _shutdown():
     global _is_shutting_down
     _is_shutting_down = True
-    loop = asyncio.get_event_loop()
     if peer:
-        loop.run_until_complete(peer.destroy())
+        await peer.destroy()
     # loop.run_until_complete(pc.close())
     # loop.run_until_complete(signaling.close())
-    loop.close()
+    global http_session
+    await http_session.close()
 
 
 if __name__ == "__main__":
@@ -337,7 +348,8 @@ if __name__ == "__main__":
     #     coro = _run_offer(pc, signaling)
     # else:
     #     coro = _run_answer(pc, signaling)
-    coro = pnp_service_connect
+    coro = _start
+
     # run event loop
     loop = asyncio.get_event_loop()
     try:
@@ -347,4 +359,6 @@ if __name__ == "__main__":
         log.info('KeyboardInterrupt detected.')
     finally:
         log.info('Shutting down...')
-        _shutdown()
+        loop.run_until_complete(_shutdown())
+        loop.close()
+        log.info('All done.')

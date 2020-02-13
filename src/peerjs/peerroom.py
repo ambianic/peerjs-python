@@ -6,7 +6,6 @@ Same room defined as shared WiFi/LAN and Public IP Address.
 import json
 import logging
 
-from .api import API
 from .peer import Peer
 
 log = logging.getLogger(__name__)
@@ -20,12 +19,12 @@ class PeerRoom:
         # the peer this room is associated with
         self._peer = peer
         self._roomId: str = None
-        self._api = API(self._peer.options)
+        self._api = peer.http_api
 
     async def _restCall(self, http_method='GET', rest_method=None):
         log.debug('REST Call %s %s', http_method, rest_method)
         url = self._api._buildUrl(rest_method=rest_method)
-        status, text = await API.fetch(url=url, method=http_method)
+        status, text = await self._api.fetch(url=url, method=http_method)
         if status != 200:
             raise ConnectionError(f'Unexpected status code {status} '
                                   f'for {url}')

@@ -28,6 +28,7 @@ class API:
         """Create API instance."""
         self._options = options
         log.debug('API options: %s', options)
+        self._http_session = aiohttp.ClientSession()
 
     def _buildUrl(self, rest_method: str = None) -> str:
         log.debug('port %s', self._options.port)
@@ -40,8 +41,7 @@ class API:
         log.debug('built url: %s', url)
         return url
 
-    @staticmethod
-    async def fetch(url=None, method='GET', body=None):
+    async def fetch(self, url=None, method='GET', body=None):
         """Similar to web browser JavaScript fetch."""
         log.debug('fetching \n method: [%s] \n url: %s \n body: %s',
                   method,
@@ -51,28 +51,27 @@ class API:
             method = HttpMethod.GET
         status: int = None
         text: str = None
-        async with aiohttp.ClientSession() as session:
-            if method == HttpMethod.GET:
-                async with session.get(url) as response:
-                    status = response.status
-                    text = await response.text()
-            elif method == HttpMethod.POST:
-                async with session.post(url, data=body) as response:
-                    log.debug('fetch POST response: %r', response)
-                    status = response.status
-                    text = await response.text()
-            else:
-                raise NotImplementedError(
-                    f"HTTP requst method {method} not implemented yet. "
-                    "Contributions welcome!")
-            log.debug('fetch result status: %d, text: %s', status, text)
-            return (status, text)
+        if method == HttpMethod.GET:
+            async with self._http_session.get(url) as response:
+                status = response.status
+                text = await response.text()
+        elif method == HttpMethod.POST:
+            async with self._http_session.post(url, data=body) as response:
+                log.debug('fetch POST response: %r', response)
+                status = response.status
+                text = await response.text()
+        else:
+            raise NotImplementedError(
+                f"HTTP requst method {method} not implemented yet. "
+                "Contributions welcome!")
+        log.debug('fetch result status: %d, text: %s', status, text)
+        return (status, text)
 
     async def retrieveId(self):
         """Get a unique ID from the server and initialize with it."""
         url = self._buildUrl(rest_method="id")
         try:
-            status, text = await API.fetch(url)
+            status, text = await self.fetch(url)
             if status != 200:
                 log.error("Unexpected status code retrieving ID: %r",
                           status)
@@ -93,3 +92,7 @@ class API:
                 raise ConnectionError(
                     "Could not get an ID from the server." +
                     pathError)
+
+    async def close(self):
+        """Close any open http pooling resources."""
+        await self._http_session.close()

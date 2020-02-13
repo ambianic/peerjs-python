@@ -137,6 +137,11 @@ class Peer(AsyncIOEventEmitter):
         """Return peer's websocket wrapper for the signaling connection."""
         return self._socket
 
+    @property
+    def http_api(self):
+        """Return peer's active http API resource."""
+        return self._api
+    
     # #
     #  * @deprecated
     #  * Return type will change from Object to Map<string,[]>
@@ -490,6 +495,7 @@ class Peer(AsyncIOEventEmitter):
             await self._cleanupPeer(peerId)
             self._connections.pop(peerId, None)
         self.socket.remove_all_listeners()
+        await self._api.close()
 
     async def _cleanupPeer(self, peerId: str) -> None:
         """Close all connections to this peer."""
