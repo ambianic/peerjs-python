@@ -313,10 +313,11 @@ async def _start():
         await make_discoverable(peer=peer)
         log.info('Exited make_discoverable')
     else:
-        log.warning('No new peer created. An active peer already exists.')
+        log.warning('Failed to create peer.')
+    return peer
 
 
-async def _shutdown():
+async def _shutdown(peer=None):
     global _is_shutting_down
     _is_shutting_down = True
     if peer:
@@ -346,17 +347,17 @@ if __name__ == "__main__":
     #     coro = _run_offer(pc, signaling)
     # else:
     #     coro = _run_answer(pc, signaling)
-    coro = _start
 
     # run event loop
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(coro())
-        loop.run_forever()
+        peer = await _start()
+        if peer:
+            loop.run_forever()
     except KeyboardInterrupt:
         log.info('KeyboardInterrupt detected.')
     finally:
         log.info('Shutting down...')
-        loop.run_until_complete(_shutdown())
+        await _shutdown(peer=peer)
         loop.close()
         log.info('All done.')
