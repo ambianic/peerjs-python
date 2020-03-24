@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 LOG_LEVEL = logging.INFO
 
+peer = None
 savedPeerId = None
 # persisted config dict
 config = {}
@@ -307,6 +308,7 @@ def _config_logger():
 async def _start():
     global http_session
     http_session = aiohttp.ClientSession()
+    global peer
     peer = await pnp_service_connect()
     if peer:
         log.info('Calling make_discoverable')
@@ -317,11 +319,16 @@ async def _start():
     return peer
 
 
-async def _shutdown(peer=None):
+async def _shutdown():
     global _is_shutting_down
     _is_shutting_down = True
+    global peer
+    log.debug('Shutting down. Peer %r', peer)
     if peer:
+        log.info('Destroying peer %r', peer)
         await peer.destroy()
+    else:
+        log.info('Peer is None')
     # loop.run_until_complete(pc.close())
     # loop.run_until_complete(signaling.close())
     global http_session
@@ -351,13 +358,13 @@ if __name__ == "__main__":
     # run event loop
     loop = asyncio.get_event_loop()
     try:
-        peer = await _start()
-        if peer:
-            loop.run_forever()
+        log.info('\n>>>>> Starting http-proxy over webrtc. <<<<')
+        loop.run_until_complete(_start())
+        loop.run_forever()
     except KeyboardInterrupt:
         log.info('KeyboardInterrupt detected.')
     finally:
         log.info('Shutting down...')
-        await _shutdown(peer=peer)
+        loop.run_until_complete(_shutdown())
         loop.close()
         log.info('All done.')
