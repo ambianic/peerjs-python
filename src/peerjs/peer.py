@@ -157,12 +157,12 @@ class Peer(AsyncIOEventEmitter):
     # }
 
     @property
-    def destroyed(self, ):
+    def destroyed(self):
         """Return True if peer connections have been destroyed."""
         return self._destroyed
 
     @property
-    def disconnected(self, ):
+    def disconnected(self):
         """Return True if peer is disconnected from signaling server."""
         return self._disconnected
 

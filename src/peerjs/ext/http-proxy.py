@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 
 LOG_LEVEL = logging.INFO
 
-peer = None
 savedPeerId = None
 # persisted config dict
 config = {}
@@ -235,11 +234,6 @@ def _setPeerConnectionHandlers(peerConnection):
 
 async def pnp_service_connect() -> Peer:
     """Create a Peer instance and register with PnP signaling server."""
-    # if connection to pnp service already open, then nothing to do
-    global peer
-    if peer and peer.open:
-        log.info('peer already connected')
-        return
     # Create own peer object with connection to shared PeerJS server
     log.info('creating peer')
     # If we already have an assigned peerId, we will reuse it forever.
@@ -262,9 +256,7 @@ async def pnp_service_connect() -> Peer:
     await peer.start()
     log.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
-    log.info('Calling make_discoverable')
-    await make_discoverable(peer=peer)
-    log.info('Exited make_discoverable')
+    return peer
 
 
 async def make_discoverable(peer=None):
@@ -282,9 +274,11 @@ async def make_discoverable(peer=None):
             if peer.open:
                 await join_peer_room(peer=peer)
             else:
-                log.info('Peer not connected to signaling server. '
-                         'Will retry in a bit.')
-                if peer.disconnected:
+                log.info('Peer connected is not open.')
+                elif peer.destroyed:
+                    log.info('Peer connection destroyed. Will create a new peer.')
+                    peer = await pnp_service_connect()
+                elif peer.disconnected:
                     log.info('Peer disconnected. Will try to reconnect.')
                     await peer.reconnect()
                 else:
@@ -315,7 +309,13 @@ def _config_logger():
 async def _start():
     global http_session
     http_session = aiohttp.ClientSession()
-    await pnp_service_connect()
+    peer = await pnp_service_connect()
+    if peer:
+        log.info('Calling make_discoverable')
+        await make_discoverable(peer=peer)
+        log.info('Exited make_discoverable')
+    else:
+        log.warning('No new peer created. An active peer already exists.')
 
 
 async def _shutdown():
