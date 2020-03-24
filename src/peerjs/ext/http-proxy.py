@@ -235,11 +235,6 @@ def _setPeerConnectionHandlers(peerConnection):
 
 async def pnp_service_connect() -> Peer:
     """Create a Peer instance and register with PnP signaling server."""
-    # if connection to pnp service already open, then nothing to do
-    global peer
-    if peer and peer.open:
-        log.info('peer already connected')
-        return
     # Create own peer object with connection to shared PeerJS server
     log.info('creating peer')
     # If we already have an assigned peerId, we will reuse it forever.
@@ -262,9 +257,7 @@ async def pnp_service_connect() -> Peer:
     await peer.start()
     log.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
-    log.info('Calling make_discoverable')
-    await make_discoverable(peer=peer)
-    log.info('Exited make_discoverable')
+    return peer
 
 
 async def make_discoverable(peer=None):
@@ -281,14 +274,14 @@ async def make_discoverable(peer=None):
             # to the signaling server is alive
             if peer.open:
                 await join_peer_room(peer=peer)
+            elif peer.destroyed:
+                log.info('Peer connection destroyed. Will create a new peer.')
+                peer = await pnp_service_connect()
+            elif peer.disconnected:
+                log.info('Peer disconnected. Will try to reconnect.')
+                await peer.reconnect()
             else:
-                log.info('Peer not connected to signaling server. '
-                         'Will retry in a bit.')
-                if peer.disconnected:
-                    log.info('Peer disconnected. Will try to reconnect.')
-                    await peer.reconnect()
-                else:
-                    log.info('Peer still establishing connection. %r', peer)
+                log.info('Peer still establishing connection. %r', peer)
         except Exception as e:
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '
@@ -315,14 +308,27 @@ def _config_logger():
 async def _start():
     global http_session
     http_session = aiohttp.ClientSession()
-    await pnp_service_connect()
+    global peer
+    peer = await pnp_service_connect()
+    if peer:
+        log.info('Calling make_discoverable')
+        await make_discoverable(peer=peer)
+        log.info('Exited make_discoverable')
+    else:
+        log.warning('Failed to create peer.')
+    return peer
 
 
 async def _shutdown():
     global _is_shutting_down
     _is_shutting_down = True
+    global peer
+    log.debug('Shutting down. Peer %r', peer)
     if peer:
+        log.info('Destroying peer %r', peer)
         await peer.destroy()
+    else:
+        log.info('Peer is None')
     # loop.run_until_complete(pc.close())
     # loop.run_until_complete(signaling.close())
     global http_session
@@ -348,12 +354,12 @@ if __name__ == "__main__":
     #     coro = _run_offer(pc, signaling)
     # else:
     #     coro = _run_answer(pc, signaling)
-    coro = _start
 
     # run event loop
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(coro())
+        log.info('\n>>>>> Starting http-proxy over webrtc. <<<<')
+        loop.run_until_complete(_start())
         loop.run_forever()
     except KeyboardInterrupt:
         log.info('KeyboardInterrupt detected.')

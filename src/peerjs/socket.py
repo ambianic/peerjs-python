@@ -64,6 +64,9 @@ class Socket(AsyncIOEventEmitter):
                     log.exception("Invalid server message: %s, error %s",
                                   message, e)
                 self.emit('message', message)
+        except asyncio.CancelledError:
+            log.debug('Websocket receive loop cancelled.')
+            return
         except ConnectionClosedError as err:
             log.warning("Websocket connection closed with error. %s", err)
         except RuntimeError as e:
@@ -137,6 +140,8 @@ class Socket(AsyncIOEventEmitter):
             self.emit(SocketEventType.Disconnected)
 
     async def _cleanup(self) -> None:
+        if self._receiver:
+            self._receiver.cancel()
         if self._websocket:
             await self._websocket.close()
             self._websocket = None
