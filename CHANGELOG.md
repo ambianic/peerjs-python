@@ -1,5 +1,15 @@
 # Semantic Versioning Changelog
 
+## [1.2.2](https://github.com/ambianic/peerjs-python/compare/v1.2.1...v1.2.2) (2020-03-24)
+
+
+### Bug Fixes
+
+* handle graceful peer reconnect on network disruptions ([95ce08c](https://github.com/ambianic/peerjs-python/commit/95ce08c2da0def7ec952e69c79a427ec95ee3294))
+* move peer to local variable scope ([3afc680](https://github.com/ambianic/peerjs-python/commit/3afc680ab2103f779310428d519b65c95904bca9))
+* shutdown cleanup ([de121d7](https://github.com/ambianic/peerjs-python/commit/de121d70615aed96fea04cb6f3e6a50cb58df48c))
+* syntax error ([10ad6e1](https://github.com/ambianic/peerjs-python/commit/10ad6e1afe65ccd21366ae21b211d6faa75426da))
+
 ## [1.2.1](https://github.com/ambianic/peerjs-python/compare/v1.2.0...v1.2.1) (2020-02-13)
 
 
