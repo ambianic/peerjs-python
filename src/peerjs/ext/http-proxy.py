@@ -273,16 +273,14 @@ async def make_discoverable(peer=None):
             # to the signaling server is alive
             if peer.open:
                 await join_peer_room(peer=peer)
+            elif peer.destroyed:
+                log.info('Peer connection destroyed. Will create a new peer.')
+                peer = await pnp_service_connect()
+            elif peer.disconnected:
+                log.info('Peer disconnected. Will try to reconnect.')
+                await peer.reconnect()
             else:
-                log.info('Peer connected is not open.')
-                elif peer.destroyed:
-                    log.info('Peer connection destroyed. Will create a new peer.')
-                    peer = await pnp_service_connect()
-                elif peer.disconnected:
-                    log.info('Peer disconnected. Will try to reconnect.')
-                    await peer.reconnect()
-                else:
-                    log.info('Peer still establishing connection. %r', peer)
+                log.info('Peer still establishing connection. %r', peer)
         except Exception as e:
             log.exception('Unable to join room. '
                           'Will retry in a few moments. '
