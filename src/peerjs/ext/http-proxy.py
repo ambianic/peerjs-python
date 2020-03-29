@@ -263,29 +263,34 @@ async def pnp_service_connect() -> Peer:
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
     log.debug('Enter peer discoverable.')
-    assert peer
     log.debug('Before _is_shutting_down')
     global _is_shutting_down
     log.debug('Making peer discoverable.')
     while not _is_shutting_down:
         log.debug('Discovery loop.')
+        log.debug('peer status: %r', peer)
         try:
-            # check if the websocket connection
-            # to the signaling server is alive
-            if peer.open:
-                await join_peer_room(peer=peer)
-            elif peer.destroyed:
-                log.info('Peer connection destroyed. Will create a new peer.')
+            if not peer or peer.destroyed:
+                log.info('Peer destroyed. Will create a new peer.')
                 peer = await pnp_service_connect()
+            elif peer.open:
+                await join_peer_room(peer=peer)
             elif peer.disconnected:
                 log.info('Peer disconnected. Will try to reconnect.')
                 await peer.reconnect()
             else:
                 log.info('Peer still establishing connection. %r', peer)
         except Exception as e:
-            log.exception('Unable to join room. '
+            log.exception('Error while trying to join local peer room. '
                           'Will retry in a few moments. '
-                          'Error %r', e)
+                          'Error: \n%r', e)
+            if peer and not peer.destroyed:
+                # something is not right with the connection to the server
+                # lets start a fresh peer connection
+                log.info('Peer connection was corrupted. Detroying peer.')
+                await peer.destroy()
+                peer = None
+                log.debug('peer status after destroy: %r', peer)
         await asyncio.sleep(3)
 
 
@@ -309,14 +314,9 @@ async def _start():
     global http_session
     http_session = aiohttp.ClientSession()
     global peer
-    peer = await pnp_service_connect()
-    if peer:
-        log.info('Calling make_discoverable')
-        await make_discoverable(peer=peer)
-        log.info('Exited make_discoverable')
-    else:
-        log.warning('Failed to create peer.')
-    return peer
+    log.info('Calling make_discoverable')
+    await make_discoverable(peer=peer)
+    log.info('Exited make_discoverable')
 
 
 async def _shutdown():
