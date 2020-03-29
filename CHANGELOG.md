@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.2.3](https://github.com/ambianic/peerjs-python/compare/v1.2.2...v1.2.3) (2020-03-29)
+
+
+### Bug Fixes
+
+* improve http-proxy resilience to network disruptions ([2a85739](https://github.com/ambianic/peerjs-python/commit/2a857392b5df6e7b4cf765e91f409ae7791deb42))
+
 ## [1.2.2](https://github.com/ambianic/peerjs-python/compare/v1.2.1...v1.2.2) (2020-03-24)
 
 
