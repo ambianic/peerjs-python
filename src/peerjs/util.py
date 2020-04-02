@@ -15,11 +15,47 @@ log = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = RTCConfiguration(
     iceServers=[
-        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
-        RTCIceServer(urls=["turn:0.peerjs.com:3478"],
-                     username="peerjs",
-                     credential="peerjsp"
-                     )
+        RTCIceServer(
+            urls=[
+                "stun:stun1.l.google.com:19302",
+                "stun:stun2.l.google.com:19302",
+                "stun:stun3.l.google.com:19302",
+                "stun:stun4.l.google.com:19302",
+                "stun:stun.l.google.com:19302",
+                "stun:stun.services.mozilla.com:3478",
+                "stun:stunserver.org:3478",
+                ]
+                ),
+        RTCIceServer(
+            urls=['turn:numb.viagenie.ca'],
+            username='webrtc@live.com',
+            credential='muazkh'
+            ),
+        RTCIceServer(
+            urls=['turn:192.158.29.39:3478?transport=udp'],
+            credential='JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+            username='28224511:1379330808'
+            ),
+        RTCIceServer(
+            urls=['turn:192.158.29.39:3478?transport=tcp'],
+            credential='JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+            username='28224511:1379330808'
+            ),
+        RTCIceServer(
+            urls=['turn:turn.bistri.com:80'],
+            credential='homeo',
+            username='homeo'
+            ),
+        RTCIceServer(
+            urls=['turn:turn.anyfirewall.com:443?transport=tcp'],
+            credential='webrtc',
+            username='webrtc'
+            ),
+        RTCIceServer(
+            urls=["turn:0.peerjs.com:3478"],
+            username="peerjs",
+            credential="peerjsp"
+            )
         ]
     )
 
