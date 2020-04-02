@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.2.4](https://github.com/ambianic/peerjs-python/compare/v1.2.3...v1.2.4) (2020-04-02)
+
+
+### Bug Fixes
+
+* expand list of fallback stun and turn servers ([5e179f3](https://github.com/ambianic/peerjs-python/commit/5e179f3995f442f88491e95b728dc98eb02828d2))
+
 ## [1.2.3](https://github.com/ambianic/peerjs-python/compare/v1.2.2...v1.2.3) (2020-03-29)
 
 
