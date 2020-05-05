@@ -18,7 +18,7 @@ Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider. This 
 
 On Debian/Ubuntu run:
 ```
-apt install libavdevice-dev libavfilter-dev libopus-dev libvpx-dev pkg-config
+apt install libavdevice-dev libavfilter-dev libopus-dev libvpx-dev pkg-config libsrtp2-dev
 ```
 On OS X run:
 ```
