@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.2.5](https://github.com/ambianic/peerjs-python/compare/v1.2.4...v1.2.5) (2020-06-03)
+
+
+### Bug Fixes
+
+* upgrade av to 8.0.0 ([656b312](https://github.com/ambianic/peerjs-python/commit/656b3125db1779968642b310e0bbbfd58c1b7824))
+
 ## [1.2.4](https://github.com/ambianic/peerjs-python/compare/v1.2.3...v1.2.4) (2020-04-02)
 
 
