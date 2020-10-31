@@ -19,12 +19,7 @@ DEFAULT_CONFIG = RTCConfiguration(
             urls=[
                 "stun:stun.l.google.com:19302"
                 ]
-                ),
-        RTCIceServer(
-            urls=['turn:turn.bistri.com:80'],
-            credential='homeo',
-            username='homeo'
-            )
+                )
         ]
     )
 
