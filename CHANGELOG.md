@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.2.6](https://github.com/ambianic/peerjs-python/compare/v1.2.5...v1.2.6) (2020-10-31)
+
+
+### Bug Fixes
+
+* remove dead STUN and TURN servers ([ef53875](https://github.com/ambianic/peerjs-python/commit/ef53875cb23f99ecfe4807a3d6f4cad9a01f3206))
+* support python 3.7 and 3.8 ([cfb81a1](https://github.com/ambianic/peerjs-python/commit/cfb81a1d3576946b349202a62f4a7a2aae8d3e54))
+
 ## [1.2.5](https://github.com/ambianic/peerjs-python/compare/v1.2.4...v1.2.5) (2020-06-03)
 
 
