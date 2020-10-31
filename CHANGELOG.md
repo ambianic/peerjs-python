@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.2.7](https://github.com/ambianic/peerjs-python/compare/v1.2.6...v1.2.7) (2020-10-31)
+
+
+### Bug Fixes
+
+* accomodate aiortc 1.0 breaking change ([eebc55c](https://github.com/ambianic/peerjs-python/commit/eebc55c7b2e701da907634114e0c73fc02fe6e2d))
+* remove irresponsive TURN server ([4cafb54](https://github.com/ambianic/peerjs-python/commit/4cafb546e9eb2631026cbe64c2064289302b1a1d))
+
 ## [1.2.6](https://github.com/ambianic/peerjs-python/compare/v1.2.5...v1.2.6) (2020-10-31)
 
 
