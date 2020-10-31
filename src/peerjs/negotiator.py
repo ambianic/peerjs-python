@@ -322,7 +322,7 @@ class Negotiator:
             rtc_ice_candidate.sdpMLineIndex = sdpMLineIndex
             log.debug('RTCIceCandidate: %r', rtc_ice_candidate)
             log.debug('peerConnection: %r', peerConnection)
-            peerConnection.addIceCandidate(rtc_ice_candidate)
+            await peerConnection.addIceCandidate(rtc_ice_candidate)
             log.debug('Added ICE candidate for peer %s',
                       self.connection.peer)
         except Exception as err:
