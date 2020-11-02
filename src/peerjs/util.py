@@ -4,6 +4,7 @@ import math
 import re
 from dataclasses import dataclass
 from uuid import uuid4
+import os
 # import msgpack
 
 from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
@@ -13,16 +14,24 @@ from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
 log = logging.getLogger(__name__)
 
+
+default_stun_servers = [
+    "stun:stun.l.google.com:19302"
+]
+
+stun_servers = [] + default_stun_servers
+
+server_list_str = os.environ.get("STUN_SERVERS")
+if server_list_str:
+    server_list = server_list_str.split(";")
+    for el in server_list:
+        default_stun_servers.append(el)
+
 DEFAULT_CONFIG = RTCConfiguration(
     iceServers=[
-        RTCIceServer(
-            urls=[
-                "stun:stun.l.google.com:19302"
-                ]
-                )
-        ]
-    )
-
+        RTCIceServer(urls=default_stun_servers)
+    ]
+)
 
 @dataclass
 class UtilSupports:
