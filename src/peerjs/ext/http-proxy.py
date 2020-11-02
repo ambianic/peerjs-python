@@ -100,13 +100,13 @@ def _loadConfig():
         with conf_file.open() as infile:
             config = json.load(infile)
         savedPeerId = config.get('peerId', None)
-        if not "host" in config.keys():
+        if "host" not in config.keys():
             config["host"] = AMBIANIC_PNP_HOST
-        if not "port" in config.keys():
+        if "port" not in config.keys():
             config["port"] = AMBIANIC_PNP_PORT
-        if not "secure" in config.keys():
+        if "secure" not in config.keys():
             config["secure"] = AMBIANIC_PNP_SECURE
-        if not "stun_servers" in config.keys():
+        if "stun_servers" not in config.keys():
             config["stun_servers"] = default_stun_servers
 
 
