@@ -1,5 +1,6 @@
 """Register with PNP server and wait for remote peers to connect."""
 # import argparse
+import os
 import asyncio
 import logging
 import sys
@@ -12,7 +13,7 @@ from pathlib import Path
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
 from peerjs.peerroom import PeerRoom
-from peerjs.util import util
+from peerjs.util import util, default_stun_servers
 from peerjs.enums import ConnectionEventType, PeerEventType
 
 print(sys.version)
@@ -24,11 +25,29 @@ LOG_LEVEL = logging.INFO
 peer = None
 savedPeerId = None
 # persisted config dict
-config = {}
-CONFIG_FILE = '.peerjsrc'
+
 AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'  # 'localhost'
 AMBIANIC_PNP_PORT = 443  # 9779
 AMBIANIC_PNP_SECURE = True  # False
+
+server_list_str = os.environ.get("STUN_SERVERS")
+if server_list_str:
+    server_list = server_list_str.split(";")
+    for el in server_list:
+        if el not in default_stun_servers:
+            default_stun_servers.append(el)
+
+config = {
+    'host':   AMBIANIC_PNP_HOST,
+    'port':   AMBIANIC_PNP_PORT,
+    'secure': AMBIANIC_PNP_SECURE,
+    'stun_servers': default_stun_servers,
+}
+
+CONFIG_FILE = '.peerjsrc'
+if os.environ.get("PEERJS_CONFIG_FILE"):
+    CONFIG_FILE = os.environ.get("PEERJS_CONFIG_FILE")
+
 time_start = None
 peerConnectionStatus = None
 discoveryLoop = None
@@ -81,6 +100,14 @@ def _loadConfig():
         with conf_file.open() as infile:
             config = json.load(infile)
         savedPeerId = config.get('peerId', None)
+        if not "host" in config.keys():
+            config["host"] = AMBIANIC_PNP_HOST
+        if not "port" in config.keys():
+            config["port"] = AMBIANIC_PNP_PORT
+        if not "secure" in config.keys():
+            config["secure"] = AMBIANIC_PNP_SECURE
+        if not "stun_servers" in config.keys():
+            config["stun_servers"] = default_stun_servers
 
 
 def _setPnPServiceConnectionHandlers(peer=None):
@@ -241,14 +268,16 @@ async def pnp_service_connect() -> Peer:
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
     global savedPeerId
+    global config
     log.info('last saved savedPeerId %s', savedPeerId)
     new_token = util.randomToken()
     log.info('Peer session token %s', new_token)
     options = PeerOptions(
-        host=AMBIANIC_PNP_HOST,
-        port=AMBIANIC_PNP_PORT,
-        secure=AMBIANIC_PNP_SECURE,
-        token=new_token
+        host=config['host'],
+        port=config['port'],
+        secure=config['secure'],
+        token=new_token,
+        config=config['stun_servers']
     )
     peer = Peer(id=savedPeerId, peer_options=options)
     log.info('pnpService: peer created with id %s , options: %r',
