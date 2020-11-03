@@ -5,6 +5,7 @@ import asyncio
 import logging
 import sys
 import json
+import yaml
 import aiohttp
 from typing import Any
 import coloredlogs
@@ -13,14 +14,15 @@ from pathlib import Path
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
 from peerjs.peerroom import PeerRoom
-from peerjs.util import util, default_stun_servers
+from peerjs.util import util, default_ice_servers
 from peerjs.enums import ConnectionEventType, PeerEventType
+from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
 print(sys.version)
 
 log = logging.getLogger(__name__)
 
-LOG_LEVEL = logging.INFO
+DEFAULT_LOG_LEVEL = "INFO"
 
 peer = None
 savedPeerId = None
@@ -30,21 +32,19 @@ AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'  # 'localhost'
 AMBIANIC_PNP_PORT = 443  # 9779
 AMBIANIC_PNP_SECURE = True  # False
 
-server_list_str = os.environ.get("STUN_SERVERS")
-if server_list_str:
-    server_list = server_list_str.split(";")
-    for el in server_list:
-        if el not in default_stun_servers:
-            default_stun_servers.append(el)
-
 config = {
     'host':   AMBIANIC_PNP_HOST,
     'port':   AMBIANIC_PNP_PORT,
     'secure': AMBIANIC_PNP_SECURE,
-    'stun_servers': default_stun_servers,
+    'ice_servers': default_ice_servers,
+    'log_level': DEFAULT_LOG_LEVEL,
 }
 
-CONFIG_FILE = '.peerjsrc'
+PEERID_FILE = '.peerjsrc'
+if os.environ.get("PEERJS_PEERID_FILE"):
+    PEERID_FILE = os.environ.get("PEERJS_PEERID_FILE")
+
+CONFIG_FILE = 'peerjs-config.yaml'
 if os.environ.get("PEERJS_CONFIG_FILE"):
     CONFIG_FILE = os.environ.get("PEERJS_CONFIG_FILE")
 
@@ -87,28 +87,45 @@ def _savePeerId(peerId=None):
     assert peerId
     global savedPeerId
     savedPeerId = peerId
-    config['peerId'] = peerId
-    with open(CONFIG_FILE, 'w') as outfile:
-        json.dump(config, outfile)
+    with open(PEERID_FILE, 'w') as outfile:
+        json.dump({ 'peerId': peerId }, outfile)
+
+
+def _loadPeerId():
+    global savedPeerId
+    conf_file = Path(PEERID_FILE)
+    if conf_file.exists():
+        conf = {}
+        with conf_file.open() as infile:
+            conf = json.load(infile)
+        savedPeerId = conf.get('peerId', None)
 
 
 def _loadConfig():
     global config
-    global savedPeerId
     conf_file = Path(CONFIG_FILE)
     if conf_file.exists():
         with conf_file.open() as infile:
-            config = json.load(infile)
-        savedPeerId = config.get('peerId', None)
-        if "host" not in config.keys():
-            config["host"] = AMBIANIC_PNP_HOST
-        if "port" not in config.keys():
-            config["port"] = AMBIANIC_PNP_PORT
-        if "secure" not in config.keys():
-            config["secure"] = AMBIANIC_PNP_SECURE
-        if "stun_servers" not in config.keys():
-            config["stun_servers"] = default_stun_servers
+            config = yaml.load(infile)
+    # Set defaults
+    if config is None:
+        config = {}
+    if "host" not in config.keys():
+        config["host"] = AMBIANIC_PNP_HOST
+    if "port" not in config.keys():
+        config["port"] = AMBIANIC_PNP_PORT
+    if "secure" not in config.keys():
+        config["secure"] = AMBIANIC_PNP_SECURE
+    if "ice_servers" not in config.keys():
+        config["ice_servers"] = default_ice_servers
 
+def _saveConfig():
+    global config
+    cfg1 = config.copy()
+    if 'peerId' in cfg1.keys():
+        del cfg1["peerId"]
+    with open(CONFIG_FILE, 'w') as outfile:
+        yaml.dump(cfg1, outfile)
 
 def _setPnPServiceConnectionHandlers(peer=None):
     assert peer
@@ -272,12 +289,16 @@ async def pnp_service_connect() -> Peer:
     log.info('last saved savedPeerId %s', savedPeerId)
     new_token = util.randomToken()
     log.info('Peer session token %s', new_token)
+
+    
     options = PeerOptions(
         host=config['host'],
         port=config['port'],
         secure=config['secure'],
         token=new_token,
-        config=config['stun_servers']
+        config=RTCConfiguration(
+            iceServers=[RTCIceServer(**srv) for srv in config['ice_servers']]
+        )
     )
     peer = Peer(id=savedPeerId, peer_options=options)
     log.info('pnpService: peer created with id %s , options: %r',
@@ -324,6 +345,7 @@ async def make_discoverable(peer=None):
 
 
 def _config_logger():
+    global config
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
     format_cfg = '%(asctime)s %(levelname)-4s ' \
@@ -332,11 +354,14 @@ def _config_logger():
     fmt = logging.Formatter(fmt=format_cfg,
                             datefmt=datefmt_cfg, style='%')
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(LOG_LEVEL)
+    logLevel = config["log_level"]
+    if not logLevel:
+        logLevel = DEFAULT_LOG_LEVEL
+    ch.setLevel(logLevel)
     ch.setFormatter(fmt)
     root_logger.handlers = []
     root_logger.addHandler(ch)
-    coloredlogs.install(level=LOG_LEVEL, fmt=format_cfg)
+    coloredlogs.install(level=logLevel, fmt=format_cfg)
 
 
 async def _start():
@@ -372,7 +397,10 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
-    _loadConfig()
+    _loadPeerId()
+    exists = _loadConfig()
+    if not exists:
+        _saveConfig()
     _config_logger()
     # add formatter to ch
     log.debug('Log level set to debug')

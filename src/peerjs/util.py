@@ -14,15 +14,14 @@ from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
 log = logging.getLogger(__name__)
 
-
-default_stun_servers = [
-    "stun:stun.l.google.com:19302"
+default_ice_servers = [
+    {
+        "urls": ["stun:stun.l.google.com:19302"]
+    }
 ]
 
 DEFAULT_CONFIG = RTCConfiguration(
-    iceServers=[
-        RTCIceServer(urls=default_stun_servers)
-    ]
+    iceServers=[RTCIceServer(**srv) for srv in default_ice_servers]
 )
 
 @dataclass
