@@ -104,7 +104,8 @@ def _loadPeerId():
 def _loadConfig():
     global config
     conf_file = Path(CONFIG_FILE)
-    if conf_file.exists():
+    exists = conf_file.exists()
+    if exists:
         with conf_file.open() as infile:
             config = yaml.load(infile)
     # Set defaults
@@ -118,6 +119,8 @@ def _loadConfig():
         config["secure"] = AMBIANIC_PNP_SECURE
     if "ice_servers" not in config.keys():
         config["ice_servers"] = default_ice_servers
+
+    return exists
 
 
 def _saveConfig():
