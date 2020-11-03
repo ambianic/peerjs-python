@@ -88,7 +88,7 @@ def _savePeerId(peerId=None):
     global savedPeerId
     savedPeerId = peerId
     with open(PEERID_FILE, 'w') as outfile:
-        json.dump({ 'peerId': peerId }, outfile)
+        json.dump({'peerId': peerId}, outfile)
 
 
 def _loadPeerId():
@@ -118,6 +118,7 @@ def _loadConfig():
         config["secure"] = AMBIANIC_PNP_SECURE
     if "ice_servers" not in config.keys():
         config["ice_servers"] = default_ice_servers
+
 
 def _saveConfig():
     global config
@@ -290,7 +291,7 @@ async def pnp_service_connect() -> Peer:
     new_token = util.randomToken()
     log.info('Peer session token %s', new_token)
 
-    
+
     options = PeerOptions(
         host=config['host'],
         port=config['port'],
