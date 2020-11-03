@@ -12,6 +12,8 @@ Enables [Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Prog
 
 See Ambianic UI [PNP module](https://github.com/ambianic/ambianic-ui/blob/master/src/store/pnp.js) for a real-world example how PeerJS Python is used with PnP and HTTP Proxy.
 
+- *Setting additional STUN servers* is possible  using the `STUN_SERVERS` env variable, separated by semicolon (`;`). Eg. `STUN_SERVERS=stun:example1.org:19302;stun:example2.org:19302;`
+
 ## Dependencies
 
 Uses [aiortc](https://github.com/aiortc/aiortc) as Python WebRTC provider. This requires installing a few native dependencies for audio/video media processing.
