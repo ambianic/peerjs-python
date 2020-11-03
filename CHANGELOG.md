@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.3.0](https://github.com/ambianic/peerjs-python/compare/v1.2.7...v1.3.0) (2020-11-03)
+
+
+### Features
+
+* expose stun servers config ([22f69b3](https://github.com/ambianic/peerjs-python/commit/22f69b3eaa79097791b2ec2c61abbd823c6c6a38)), closes [#36](https://github.com/ambianic/peerjs-python/issues/36)
+
 ## [1.2.7](https://github.com/ambianic/peerjs-python/compare/v1.2.6...v1.2.7) (2020-10-31)
 
 
