@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.4.0](https://github.com/ambianic/peerjs-python/compare/v1.3.0...v1.4.0) (2020-11-09)
+
+
+### Features
+
+* expose dedicated configuration ([c1cf754](https://github.com/ambianic/peerjs-python/commit/c1cf7544ebbc15cc054d66faddb4e2cff6acb291)), closes [#37](https://github.com/ambianic/peerjs-python/issues/37)
+
 # [1.3.0](https://github.com/ambianic/peerjs-python/compare/v1.2.7...v1.3.0) (2020-11-03)
 
 
