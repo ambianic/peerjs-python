@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.4.1](https://github.com/ambianic/peerjs-python/compare/v1.4.0...v1.4.1) (2020-11-28)
+
+
+### Bug Fixes
+
+* merge pull request [#38](https://github.com/ambianic/peerjs-python/issues/38) from ivelin/master ([12a4365](https://github.com/ambianic/peerjs-python/commit/12a43657fe828b3ed986ca8c8aae82f85a79ffb5))
+* peer reconnect error; closes [#31](https://github.com/ambianic/peerjs-python/issues/31) ([6b68cfa](https://github.com/ambianic/peerjs-python/commit/6b68cfa9145422488cf35f161e9e40ea88ae73ee))
+
 # [1.4.0](https://github.com/ambianic/peerjs-python/compare/v1.3.0...v1.4.0) (2020-11-09)
 
 
