@@ -62,6 +62,55 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [ ] >90% code coverage with CI tests.
 -  [ ] Port media support.
   
+## Code Examples
+
+A typical p2p session takes these steps:
+1. Establish signaling server session that enables peers to discover each other.
+2. Discover remote peer ID (either via signaling server room affinity or other means)
+3. Request connection to remote peer via signaling server 
+4. Connect to remote peer via WebRTC ICE protocol.
+5. Exchange data or media with remote peer over p2p WebRTC connection.
+
+The following code snippet shows the initial part of establishing a signaling server connection. 
+
+```
+    options = PeerOptions(
+        host=config['host'],
+        port=config['port'],
+        secure=config['secure'],
+        token=new_token,
+        config=RTCConfiguration(
+            iceServers=[RTCIceServer(**srv) for srv in config['ice_servers']]
+        )
+    )
+    peer = Peer(id=savedPeerId, peer_options=options)
+    await peer.start()
+    log.info('peer activated')
+    _setPnPServiceConnectionHandlers(peer)
+```
+
+Once a signaling server connection is established, a peer can request connection to another peer or listen for requests from a remote peer.
+The example snippet bellow shows the latter:
+
+```
+    @peer.on(PeerEventType.Connection)
+    async def peer_connection(peerConnection):
+        log.info('Remote peer trying to establish connection')
+        _setPeerConnectionHandlers(peerConnection)
+```
+
+After a p2p connection is established, a peer can receive and send application messages. The following snippet shows how a peer receives a message:
+
+```
+    @peerConnection.on(ConnectionEventType.Data)
+    async def pc_data(data):
+        log.debug('data received from remote peer \n%r', data)
+```
+
+For a complete working example see [this file](https://github.com/ambianic/peerjs-python/blob/master/src/peerjs/ext/http-proxy.py).
+
+
+
 ## Other Related Open Source projects
 
 There are several great projects that solve the problem of accessing IoT devices behind firewall via tunneling servers.

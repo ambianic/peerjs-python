@@ -162,9 +162,6 @@ def _setPnPServiceConnectionHandlers(peer=None):
                       'Resetting to last known ID.')
             peer._id = savedPeerId
         peer._lastServerId = savedPeerId
-        global _is_shutting_down
-        if not _is_shutting_down:
-            await peer.reconnect()
 
     @peer.on(PeerEventType.Close)
     def peer_close():
