@@ -32,7 +32,10 @@ brew install ffmpeg opus libvpx pkg-config
 This project was originally motivated while searching for a way to: 
 -  Connect a Progressive Web App ([Ambianic UI](https://github.com/ambianic/ambianic-ui)) directly and securely to an edge device ([Ambianic Edge](https://github.com/ambianic/ambianic-edge)) running Python app on a Raspberry Pi behind a home Internet router. 
 
-Other key requirements:
+[This article in WebRTCHacks](https://webrtchacks.com/private-home-surveillance-with-the-webrtc-datachannel/) provides more insight into the background of this project.
+
+
+Main requirements:
 -  Easy Airdrop-like plug and play discovery and pairing between web app and edge devices. 
 -  Direct peer-to-peer connectivity to minimize:
     - latency
