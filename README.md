@@ -34,8 +34,8 @@ This project was originally motivated while searching for a way to:
 
 [This article in WebRTCHacks](https://webrtchacks.com/private-home-surveillance-with-the-webrtc-datachannel/) provides more insight into the background of this project.
 
+## Main requirements
 
-Main requirements:
 -  Easy Airdrop-like plug and play discovery and pairing between web app and edge devices. 
 -  Direct peer-to-peer connectivity to minimize:
     - latency
