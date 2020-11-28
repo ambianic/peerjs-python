@@ -1,3 +1,5 @@
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/ambianic/peerjs-python)
+
 # peerjs-python
 
 Python port of [PeerJS](https://github.com/peers) client. 
