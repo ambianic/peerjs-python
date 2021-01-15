@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.4.2](https://github.com/ambianic/peerjs-python/compare/v1.4.1...v1.4.2) (2021-01-15)
+
+
+### Bug Fixes
+
+* rename http-proxy to http_proxy ([8ee5e0b](https://github.com/ambianic/peerjs-python/commit/8ee5e0b1d46e10549308c6e131a2d38704a18465)), closes [#50](https://github.com/ambianic/peerjs-python/issues/50)
+
 ## [1.4.1](https://github.com/ambianic/peerjs-python/compare/v1.4.0...v1.4.1) (2020-11-28)
 
 
