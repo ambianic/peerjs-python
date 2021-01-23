@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.4.4](https://github.com/ambianic/peerjs-python/compare/v1.4.3...v1.4.4) (2021-01-23)
+
+
+### Bug Fixes
+
+* load peer ID from an empty file ([4cfe6fb](https://github.com/ambianic/peerjs-python/commit/4cfe6fb36e0f48ec5b29b3d491b77840921f57d8)), closes [#52](https://github.com/ambianic/peerjs-python/issues/52)
+* load peer ID from an empty file ([b9ff9fa](https://github.com/ambianic/peerjs-python/commit/b9ff9faa578eed3a53a2350b7f694fff6dc06fd7))
+
 ## [1.4.3](https://github.com/ambianic/peerjs-python/compare/v1.4.2...v1.4.3) (2021-01-23)
 
 
