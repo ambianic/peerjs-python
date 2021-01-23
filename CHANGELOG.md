@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.4.3](https://github.com/ambianic/peerjs-python/compare/v1.4.2...v1.4.3) (2021-01-23)
+
+
+### Bug Fixes
+
+* allow more lenient peers id load ([1fe71b6](https://github.com/ambianic/peerjs-python/commit/1fe71b6e5903d6068f83fb6142da64e1cd34b763)), closes [#51](https://github.com/ambianic/peerjs-python/issues/51)
+* allow more lenient peers id load ([981ae27](https://github.com/ambianic/peerjs-python/commit/981ae27bd980cb43ddef1906e9f17a7756314696))
+
 ## [1.4.2](https://github.com/ambianic/peerjs-python/compare/v1.4.1...v1.4.2) (2021-01-15)
 
 
