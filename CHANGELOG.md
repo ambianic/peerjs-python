@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+## [1.4.5](https://github.com/ambianic/peerjs-python/compare/v1.4.4...v1.4.5) (2021-01-23)
+
+
+### Bug Fixes
+
+* log_level not found in config ([fb0a2da](https://github.com/ambianic/peerjs-python/commit/fb0a2da641d97ea0e2ebd376d120fbc357d5ba02)), closes [#53](https://github.com/ambianic/peerjs-python/issues/53)
+* log_level not found in config ([ddfedea](https://github.com/ambianic/peerjs-python/commit/ddfedeac4ee4803fdee79f209f90798842312118))
+
 ## [1.4.4](https://github.com/ambianic/peerjs-python/compare/v1.4.3...v1.4.4) (2021-01-23)
 
 
