@@ -358,7 +358,8 @@ def _config_logger():
     fmt = logging.Formatter(fmt=format_cfg,
                             datefmt=datefmt_cfg, style='%')
     ch = logging.StreamHandler(sys.stdout)
-    logLevel = config["log_level"]
+    if config:
+        logLevel = config.get("log_level", None)
     if not logLevel:
         logLevel = DEFAULT_LOG_LEVEL
     ch.setLevel(logLevel)
