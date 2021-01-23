@@ -92,14 +92,17 @@ def _savePeerId(peerId=None):
 
 
 def _loadPeerId():
+    """Load and reuse saved peer ID if there is one."""
     global savedPeerId
     conf_file = Path(PEERID_FILE)
     if conf_file.exists():
         conf = {}
         with conf_file.open() as infile:
             conf = yaml.load(infile)
-        savedPeerId = conf.get('peerId', None)
-
+        if conf is not None:
+            savedPeerId = conf.get('peerId', None)
+        else:
+            savedPeerId = None
 
 def _loadConfig():
     global config
