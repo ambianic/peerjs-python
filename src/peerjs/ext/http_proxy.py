@@ -97,7 +97,7 @@ def _loadPeerId():
     if conf_file.exists():
         conf = {}
         with conf_file.open() as infile:
-            conf = json.load(infile)
+            conf = yaml.load(infile)
         savedPeerId = conf.get('peerId', None)
 
 
