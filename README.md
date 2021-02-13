@@ -62,10 +62,10 @@ Initial working prototype completed. PeerJS Python is now able to connect over W
 -  [x] Complete and test connectivity with signaling server (peerjs-server).
 -  [x] Complete and test data channel connectivity with web app peers.
 -  [x] Release initial version to PyPi.
+-  [x] support for python 3.7 & python 3.8
+-  [x] support for python 3.9 (see [dependency issue](https://github.com/ambianic/peerjs-python/issues/48))
 -  [ ] >90% code coverage with CI tests.
 -  [ ] Port media support.
--  [x] support for python 3.7 & python 3.8
--  [ ] support for python 3.9 (see [dependency issue](https://github.com/ambianic/peerjs-python/issues/48))
 
   
 ## Code Examples
