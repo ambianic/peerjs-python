@@ -54,6 +54,6 @@ jobs:
       with:
         dry_run: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     - name: Semantic release completed
       run: echo Semantic release flow completed
