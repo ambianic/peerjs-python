@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.4.2](https://github.com/ivelin/peerjs-python/compare/v1.4.1...v1.4.2) (2021-09-21)
+
+
+### Bug Fixes
+
+* test new script ([5090913](https://github.com/ivelin/peerjs-python/commit/5090913293a22897b850945215520a78fc5fbead))
+
 ## [1.4.1](https://github.com/ivelin/peerjs-python/compare/v1.4.0...v1.4.1) (2021-09-21)
 
 
