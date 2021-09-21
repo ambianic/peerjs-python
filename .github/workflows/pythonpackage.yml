@@ -41,7 +41,6 @@ jobs:
   release-test:
     name: Release Test Job
     needs: [build]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -67,7 +66,7 @@ jobs:
   release-prod:
     name: Release to Official Repo
     needs: [release-test]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && github.repository_owner == 'ambianic'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
