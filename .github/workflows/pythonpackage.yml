@@ -1,4 +1,4 @@
-name: Python package
+name: Python package - build, test and release
 
 on: [push, pull_request]
 
@@ -38,8 +38,8 @@ jobs:
         pip install pytest
         pytest
         
-  release:
-    name: Release Job
+  release-test:
+    name: Release Test Job
     needs: [build]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -63,3 +63,30 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     - name: Semantic release completed
       run: echo Semantic release flow completed
+
+  release-prod:
+    name: Release to Official Repo
+    needs: [release-test]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && github.repository_owner == 'ambianic'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Python 3
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Run Semantic Release
+      uses: cycjimmy/semantic-release-action@v2
+      with:
+        extra_plugins: |
+          @semantic-release/changelog
+          @semantic-release/git
+          @semantic-release/exec
+          @semantic-release/commit-analyzer
+          @semantic-release/release-notes-generator
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+    - name: Semantic release completed
+      run: echo Semantic release flow completed
+
+
