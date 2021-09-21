@@ -13,7 +13,7 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install aiortc native dependencies
       run: |
         sudo apt-get update
@@ -44,28 +44,16 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Install latest stable Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: lts/*
+    - uses: actions/checkout@v2
     - name: Install Python 3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    - name: Install Semantic Release Tool
-      run: |
-            npm install --save-dev semantic-release
-            npm install --save-dev @semantic-release/commit-analyzer
-            npm install --save-dev @semantic-release/git
-            npm install --save-dev @semantic-release/release-notes-generator
-            npm install --save-dev @semantic-release/github
-            npm install --save-dev @semantic-release/changelog
-            npm install --save-dev @semantic-release/exec
     - name: Run Semantic Release
-      run: npx semantic-release
+      uses: cycjimmy/semantic-release-action@v2
+      with:
+        dry_run: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     - name: Semantic release completed
       run: echo Semantic release flow completed
