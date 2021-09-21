@@ -52,6 +52,12 @@ jobs:
     - name: Run Semantic Release
       uses: cycjimmy/semantic-release-action@v2
       with:
+        extra_plugins: |
+          @semantic-release/changelog
+          @semantic-release/git
+          @semantic-release/exec
+          @semantic-release/commit-analyzer
+          @semantic-release/release-notes-generator
         dry_run: true
       env:
         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
