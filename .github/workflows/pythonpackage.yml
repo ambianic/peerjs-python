@@ -1,4 +1,4 @@
-name: Python package
+name: Python package - build, test and release
 
 on: [push, pull_request]
 
@@ -6,14 +6,14 @@ jobs:
   build:
     name: Build Job
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
       matrix:
         python-version: [3.7, 3.8, 3.9]
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install aiortc native dependencies
       run: |
         sudo apt-get update
@@ -38,34 +38,54 @@ jobs:
         pip install pytest
         pytest
         
-  release:
-    name: Release Job
+  release-test:
+    name: Release Test Job
     needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Python 3
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Run Semantic Release
+      uses: cycjimmy/semantic-release-action@v2
+      with:
+        extra_plugins: |
+          @semantic-release/changelog
+          @semantic-release/git
+          @semantic-release/exec
+          @semantic-release/commit-analyzer
+          @semantic-release/release-notes-generator
+        dry_run: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+    - name: Semantic release completed
+      run: echo Semantic release flow completed
+
+  release-prod:
+    name: Release to Official Repo
+    needs: [release-test]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Node.js 12
-      uses: actions/setup-node@v1
-      with:
-        node-version: 12.x
+    - uses: actions/checkout@v2
     - name: Install Python 3
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    - name: Install Semantic Release Tool
-      run: |
-            npm install --save-dev semantic-release
-            npm install --save-dev @semantic-release/commit-analyzer
-            npm install --save-dev @semantic-release/git
-            npm install --save-dev @semantic-release/release-notes-generator
-            npm install --save-dev @semantic-release/github
-            npm install --save-dev @semantic-release/changelog
-            npm install --save-dev @semantic-release/exec
     - name: Run Semantic Release
-      run: npx semantic-release
+      uses: cycjimmy/semantic-release-action@v2
+      with:
+        extra_plugins: |
+          @semantic-release/changelog
+          @semantic-release/git
+          @semantic-release/exec
+          @semantic-release/commit-analyzer
+          @semantic-release/release-notes-generator
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_PAT }}
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
     - name: Semantic release completed
       run: echo Semantic release flow completed
+
+

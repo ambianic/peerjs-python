@@ -1,5 +1,27 @@
 # Semantic Versioning Changelog
 
+## [1.4.2](https://github.com/ivelin/peerjs-python/compare/v1.4.1...v1.4.2) (2021-09-21)
+
+
+### Bug Fixes
+
+* test new script ([5090913](https://github.com/ivelin/peerjs-python/commit/5090913293a22897b850945215520a78fc5fbead))
+
+## [1.4.1](https://github.com/ivelin/peerjs-python/compare/v1.4.0...v1.4.1) (2021-09-21)
+
+
+### Bug Fixes
+
+* allow more lenient peers id load ([1fe71b6](https://github.com/ivelin/peerjs-python/commit/1fe71b6e5903d6068f83fb6142da64e1cd34b763)), closes [#51](https://github.com/ivelin/peerjs-python/issues/51)
+* allow more lenient peers id load ([981ae27](https://github.com/ivelin/peerjs-python/commit/981ae27bd980cb43ddef1906e9f17a7756314696))
+* load peer ID from an empty file ([4cfe6fb](https://github.com/ivelin/peerjs-python/commit/4cfe6fb36e0f48ec5b29b3d491b77840921f57d8)), closes [#52](https://github.com/ivelin/peerjs-python/issues/52)
+* load peer ID from an empty file ([b9ff9fa](https://github.com/ivelin/peerjs-python/commit/b9ff9faa578eed3a53a2350b7f694fff6dc06fd7))
+* log_level not found in config ([fb0a2da](https://github.com/ivelin/peerjs-python/commit/fb0a2da641d97ea0e2ebd376d120fbc357d5ba02)), closes [#53](https://github.com/ivelin/peerjs-python/issues/53)
+* log_level not found in config ([ddfedea](https://github.com/ivelin/peerjs-python/commit/ddfedeac4ee4803fdee79f209f90798842312118))
+* merge pull request [#38](https://github.com/ivelin/peerjs-python/issues/38) from ivelin/master ([12a4365](https://github.com/ivelin/peerjs-python/commit/12a43657fe828b3ed986ca8c8aae82f85a79ffb5))
+* peer reconnect error; closes [#31](https://github.com/ivelin/peerjs-python/issues/31) ([6b68cfa](https://github.com/ivelin/peerjs-python/commit/6b68cfa9145422488cf35f161e9e40ea88ae73ee))
+* rename http-proxy to http_proxy ([8ee5e0b](https://github.com/ivelin/peerjs-python/commit/8ee5e0b1d46e10549308c6e131a2d38704a18465)), closes [#50](https://github.com/ivelin/peerjs-python/issues/50)
+
 ## [1.4.5](https://github.com/ambianic/peerjs-python/compare/v1.4.4...v1.4.5) (2021-01-23)
 
 
