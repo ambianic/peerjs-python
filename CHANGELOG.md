@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+## [1.5.1](https://github.com/ambianic/peerjs-python/compare/v1.5.0...v1.5.1) (2021-10-05)
+
+
+### Bug Fixes
+
+* pypi publish script ([05114a4](https://github.com/ambianic/peerjs-python/commit/05114a49532e2a7c3fbc1084d729f198f8a35a9b))
+
 # [1.5.0](https://github.com/ambianic/peerjs-python/compare/v1.4.5...v1.5.0) (2021-10-05)
 
 
