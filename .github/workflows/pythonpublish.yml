@@ -32,7 +32,7 @@ jobs:
   publish-prod:
     name: Publish official package on PyPi.org
     needs: [publish-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.repository_owner == 'ambianic'
+    if: github.repository_owner == 'ambianic'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
