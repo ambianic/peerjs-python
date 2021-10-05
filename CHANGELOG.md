@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.5.0](https://github.com/ambianic/peerjs-python/compare/v1.4.5...v1.5.0) (2021-10-05)
+
+
+### Features
+
+* support for custom device display name ([d417830](https://github.com/ambianic/peerjs-python/commit/d41783062674eb5bdfc0ecd47c918f084bc30a39))
+* support for HTTP PUT method ([#57](https://github.com/ambianic/peerjs-python/issues/57)) ([fdb1ac5](https://github.com/ambianic/peerjs-python/commit/fdb1ac56aa8e76f88231d90aa5c8803fd9c7e78f)), closes [#51](https://github.com/ambianic/peerjs-python/issues/51) [#52](https://github.com/ambianic/peerjs-python/issues/52) [#53](https://github.com/ambianic/peerjs-python/issues/53) [#38](https://github.com/ambianic/peerjs-python/issues/38) [#31](https://github.com/ambianic/peerjs-python/issues/31) [#50](https://github.com/ambianic/peerjs-python/issues/50)
+
 ## [1.4.2](https://github.com/ivelin/peerjs-python/compare/v1.4.1...v1.4.2) (2021-09-21)
 
 
