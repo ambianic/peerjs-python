@@ -2,14 +2,13 @@
 # import argparse
 import os
 import asyncio
-import logging
 import sys
 import json
 import yaml
 import aiohttp
 from typing import Any
-import coloredlogs
 from pathlib import Path
+from loguru import logger
 
 # from aiortc import RTCIceCandidate, RTCSessionDescription
 from peerjs.peer import Peer, PeerOptions
@@ -20,10 +19,6 @@ from aiortc.rtcconfiguration import RTCConfiguration, RTCIceServer
 
 print(sys.version)
 
-log = logging.getLogger(__name__)
-
-DEFAULT_LOG_LEVEL = "INFO"
-
 peer = None
 savedPeerId = None
 # persisted config dict
@@ -32,12 +27,14 @@ AMBIANIC_PNP_HOST = 'ambianic-pnp.herokuapp.com'  # 'localhost'
 AMBIANIC_PNP_PORT = 443  # 9779
 AMBIANIC_PNP_SECURE = True  # False
 
+DEFAULT_LOG_LEVEL = 'INFO'
+
 config = {
-    'host':   AMBIANIC_PNP_HOST,
+    'signaling_server':   AMBIANIC_PNP_HOST,
     'port':   AMBIANIC_PNP_PORT,
     'secure': AMBIANIC_PNP_SECURE,
     'ice_servers': default_ice_servers,
-    'log_level': DEFAULT_LOG_LEVEL,
+    'log_level': "INFO",
 }
 
 PEERID_FILE = '.peerjsrc'
@@ -78,9 +75,9 @@ async def join_peer_room(peer=None):
     """Join a peer room with other local peers."""
     # first try to find the remote peer ID in the same room
     myRoom = PeerRoom(peer)
-    log.debug('Fetching room members...')
+    logger.debug('Fetching room members...')
     peerIds = await myRoom.getRoomMembers()
-    log.info('myRoom members %r', peerIds)
+    logger.info('myRoom members {}', peerIds)
 
 
 def _savePeerId(peerId=None):
@@ -98,24 +95,28 @@ def _loadPeerId():
     if conf_file.exists():
         conf = {}
         with conf_file.open() as infile:
-            conf = yaml.load(infile)
+            conf = yaml.load(infile, Loader=yaml.SafeLoader)
         if conf is not None:
             savedPeerId = conf.get('peerId', None)
         else:
             savedPeerId = None
 
 def _loadConfig():
+    logger.info('Loading configuration')
     global config
     conf_file = Path(CONFIG_FILE)
     exists = conf_file.exists()
     if exists:
+        logger.info(f'Loading config from: {conf_file}')
         with conf_file.open() as infile:
-            config = yaml.load(infile)
+            config = yaml.load(infile, Loader=yaml.SafeLoader)
+    else:
+        logger.info(f'Config file not found: {conf_file}')
     # Set defaults
     if config is None:
         config = {}
-    if "host" not in config.keys():
-        config["host"] = AMBIANIC_PNP_HOST
+    if "signaling_server" not in config.keys():
+        config["signaling_server"] = AMBIANIC_PNP_HOST
     if "port" not in config.keys():
         config["port"] = AMBIANIC_PNP_PORT
     if "secure" not in config.keys():
@@ -139,29 +140,29 @@ def _setPnPServiceConnectionHandlers(peer=None):
     global savedPeerId
     @peer.on(PeerEventType.Open)
     async def peer_open(id):
-        log.info('Peer signaling connection open.')
+        logger.info('Peer signaling connection open.')
         global savedPeerId
         # Workaround for peer.reconnect deleting previous id
         if peer.id is None:
-            log.info('pnpService: Received null id from peer open')
+            logger.info('pnpService: Received null id from peer open')
             peer.id = savedPeerId
         else:
             if savedPeerId != peer.id:
-                log.info(
-                    'PNP Service returned new peerId. Old %s, New %s',
+                logger.info(
+                    'PNP Service returned new peerId. Old {}, New {}',
                     savedPeerId,
                     peer.id
                     )
             _savePeerId(peer.id)
-        log.info('savedPeerId: %s', peer.id)
+        logger.info('savedPeerId: {}', peer.id)
 
     @peer.on(PeerEventType.Disconnected)
     async def peer_disconnected(peerId):
         global savedPeerId
-        log.info('Peer %s disconnected from server.', peerId)
+        logger.info('Peer {} disconnected from server.', peerId)
         # Workaround for peer.reconnect deleting previous id
         if not peer.id:
-            log.debug('BUG WORKAROUND: Peer lost ID. '
+            logger.debug('BUG WORKAROUND: Peer lost ID. '
                       'Resetting to last known ID.')
             peer._id = savedPeerId
         peer._lastServerId = savedPeerId
@@ -169,12 +170,12 @@ def _setPnPServiceConnectionHandlers(peer=None):
     @peer.on(PeerEventType.Close)
     def peer_close():
         # peerConnection = null
-        log.info('Peer connection closed')
+        logger.info('Peer connection closed')
 
     @peer.on(PeerEventType.Error)
     def peer_error(err):
-        log.exception('Peer error %s', err)
-        log.warning('peerConnectionStatus %s', peerConnectionStatus)
+        logger.exception('Peer error {}', err)
+        logger.warning('peerConnectionStatus {}', peerConnectionStatus)
         # retry peer connection in a few seconds
         # loop = asyncio.get_event_loop()
         # loop.call_later(3, pnp_service_connect)
@@ -182,7 +183,7 @@ def _setPnPServiceConnectionHandlers(peer=None):
     # remote peer tries to initiate connection
     @peer.on(PeerEventType.Connection)
     async def peer_connection(peerConnection):
-        log.info('Remote peer trying to establish connection')
+        logger.info('Remote peer trying to establish connection')
         _setPeerConnectionHandlers(peerConnection)
 
 
@@ -194,6 +195,10 @@ async def _fetch(url: str = None, method: str = 'GET') -> Any:
         # response_content = {'name': 'Ambianic-Edge', 'version': '1.24.2020'}
         # rjson = json.dumps(response_content)
         return response, content
+    elif method == 'PUT':
+        async with http_session.put(url) as response:
+            content = await response.read()
+        return response, content
     else:
         raise NotImplementedError(
             f'HTTP method ${method} not implemented.'
@@ -201,11 +206,12 @@ async def _fetch(url: str = None, method: str = 'GET') -> Any:
 
 
 async def _pong(peer_connection=None):
+    """Respond to client ping."""
     response_header = {
         'status': 200,
     }
     header_as_json = json.dumps(response_header)
-    log.debug('sending keepalive pong back to remote peer')
+    logger.debug('sending keepalive pong back to remote peer')
     await peer_connection.send(header_as_json)
     await peer_connection.send('pong')
 
@@ -217,7 +223,7 @@ async def _ping(peer_connection=None, stop_flag=None):
         # server to complete its response
         ping_as_json = json.dumps({'status': 202})
         await peer_connection.send(ping_as_json)
-        log.info('webrtc peer: http proxy response ping. '
+        logger.info('webrtc peer: http proxy response to client ping. '
                  'Keeping datachannel alive.')
         await asyncio.sleep(1)
 
@@ -226,19 +232,19 @@ def _setPeerConnectionHandlers(peerConnection):
 
     @peerConnection.on(ConnectionEventType.Open)
     async def pc_open():
-        log.info('Connected to: %s', peerConnection.peer)
+        logger.info('Connected to: {}', peerConnection.peer)
 
     # Handle incoming data (messages only since this is the signal sender)
     @peerConnection.on(ConnectionEventType.Data)
     async def pc_data(data):
-        log.debug('data received from remote peer \n%r', data)
+        logger.debug('data received from remote peer \n{}', data)
         request = json.loads(data)
         # check if the request is just a keepalive ping
         if (request['url'].startswith('ping')):
-            log.debug('received keepalive ping from remote peer')
+            logger.debug('received keepalive ping from remote peer')
             await _pong(peer_connection=peerConnection)
             return
-        log.info('webrtc peer: http proxy request: \n%r', request)
+        logger.info('webrtc peer: http proxy request: \n{}', request)
         # schedule frequent pings while waiting on response_header
         # to keep the peer data channel open
         waiting_on_fetch = asyncio.Event()
@@ -247,10 +253,12 @@ def _setPeerConnectionHandlers(peerConnection):
                                   stop_flag=waiting_on_fetch))
         response = None
         try:
+            logger.debug(f'Proxy forwarding HTTP request: {request}.')
             response, content = await _fetch(**request)
+            logger.debug(f'Proxy received HTTP response: {response}.')
         except Exception as e:
-            log.exception('Error %s while fetching response'
-                          ' with request: \n %r',
+            logger.exception('Error {} while fetching response'
+                          ' with request: \n {}',
                           e, request)
         finally:
             # fetch completed, cancel pings
@@ -265,38 +273,40 @@ def _setPeerConnectionHandlers(peerConnection):
         response_content = content
         response_header = {
             'status': response.status,
-            'content-type': response.headers['content-type'],
+            'content-type': response.headers.get('content-type', 'None'),
             'content-length': len(response_content)
         }
-        log.info('Proxy fetched response with headers: \n%r', response.headers)
-        log.info('Answering request: \n%r '
-                 'response header: \n %r',
+        logger.info('Proxy fetched response with headers: \n{}', response.headers)
+        logger.info('Answering request: \n{} '
+                 'response header: \n {}',
                  request, response_header)
         header_as_json = json.dumps(response_header)
         await peerConnection.send(header_as_json)
-        await peerConnection.send(response_content)
+        if (response.status != 204):
+            # HTTP status 204 means: Success. No content.
+            await peerConnection.send(response_content)
 
     @peerConnection.on(ConnectionEventType.Close)
     async def pc_close():
-        log.info('Connection to remote peer closed')
+        logger.info('Connection to remote peer closed')
 
 
 async def pnp_service_connect() -> Peer:
     """Create a Peer instance and register with PnP signaling server."""
     # Create own peer object with connection to shared PeerJS server
-    log.info('creating peer')
+    logger.info('creating peer')
     # If we already have an assigned peerId, we will reuse it forever.
     # We expect that peerId is crypto secure. No need to replace.
     # Unless the user explicitly requests a refresh.
     global savedPeerId
     global config
-    log.info('last saved savedPeerId %s', savedPeerId)
+    logger.info('last saved savedPeerId {}', savedPeerId)
     new_token = util.randomToken()
-    log.info('Peer session token %s', new_token)
+    logger.info('Peer session token {}', new_token)
 
 
     options = PeerOptions(
-        host=config['host'],
+        host=config['signaling_server'],
         port=config['port'],
         secure=config['secure'],
         token=new_token,
@@ -305,96 +315,85 @@ async def pnp_service_connect() -> Peer:
         )
     )
     peer = Peer(id=savedPeerId, peer_options=options)
-    log.info('pnpService: peer created with id %s , options: %r',
+    logger.info('pnpService: peer created with id {} , options: {}',
              peer.id,
              peer.options)
     await peer.start()
-    log.info('peer activated')
+    logger.info('peer activated')
     _setPnPServiceConnectionHandlers(peer)
     return peer
 
 
 async def make_discoverable(peer=None):
     """Enable remote peers to find and connect to this peer."""
-    log.debug('Enter peer discoverable.')
-    log.debug('Before _is_shutting_down')
+    logger.debug('Enter peer discoverable.')
+    logger.debug('Before _is_shutting_down')
     global _is_shutting_down
-    log.debug('Making peer discoverable.')
+    logger.debug('Making peer discoverable.')
     while not _is_shutting_down:
-        log.debug('Discovery loop.')
-        log.debug('peer status: %r', peer)
+        logger.debug('Discovery loop.')
+        logger.debug('peer status: {}', peer)
         try:
             if not peer or peer.destroyed:
-                log.info('Peer destroyed. Will create a new peer.')
+                logger.info('Peer destroyed. Will create a new peer.')
                 peer = await pnp_service_connect()
             elif peer.open:
                 await join_peer_room(peer=peer)
             elif peer.disconnected:
-                log.info('Peer disconnected. Will try to reconnect.')
+                logger.info('Peer disconnected. Will try to reconnect.')
                 await peer.reconnect()
             else:
-                log.info('Peer still establishing connection. %r', peer)
+                logger.info('Peer still establishing connection. {}', peer)
         except Exception as e:
-            log.exception('Error while trying to join local peer room. '
+            logger.exception('Error while trying to join local peer room. '
                           'Will retry in a few moments. '
-                          'Error: \n%r', e)
+                          'Error: \n{}', e)
             if peer and not peer.destroyed:
                 # something is not right with the connection to the server
                 # lets start a fresh peer connection
-                log.info('Peer connection was corrupted. Detroying peer.')
+                logger.info('Peer connection was corrupted. Detroying peer.')
                 await peer.destroy()
                 peer = None
-                log.debug('peer status after destroy: %r', peer)
+                logger.debug('peer status after destroy: {}', peer)
         await asyncio.sleep(3)
 
 
 def _config_logger():
     global config
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    format_cfg = '%(asctime)s %(levelname)-4s ' \
-        '%(pathname)s.%(funcName)s(%(lineno)d): %(message)s'
-    datefmt_cfg = '%Y-%m-%d %H:%M:%S'
-    fmt = logging.Formatter(fmt=format_cfg,
-                            datefmt=datefmt_cfg, style='%')
-    ch = logging.StreamHandler(sys.stdout)
     if config:
-        logLevel = config.get("log_level", None)
-    if not logLevel:
-        logLevel = DEFAULT_LOG_LEVEL
-    ch.setLevel(logLevel)
-    ch.setFormatter(fmt)
-    root_logger.handlers = []
-    root_logger.addHandler(ch)
-    coloredlogs.install(level=logLevel, fmt=format_cfg)
-
+        log_level = config.get("log_level", "DEBUG")
+    else:
+        log_level = DEFAULT_LOG_LEVEL
+    logger.remove()
+    logger.add(sys.stdout, colorize=True, level=log_level, enqueue=True)
+    logger.info(f'Log level is: {log_level}')
 
 async def _start():
     global http_session
     http_session = aiohttp.ClientSession()
     global peer
-    log.info('Calling make_discoverable')
+    logger.info('Calling make_discoverable')
     await make_discoverable(peer=peer)
-    log.info('Exited make_discoverable')
-
+    logger.info('Exited make_discoverable')
+    await logger.complete()
 
 async def _shutdown():
     global _is_shutting_down
     _is_shutting_down = True
     global peer
-    log.debug('Shutting down. Peer %r', peer)
+    logger.debug('Shutting down. Peer {}', peer)
     if peer:
-        log.info('Destroying peer %r', peer)
+        logger.info('Destroying peer {}', peer)
         await peer.destroy()
     else:
-        log.info('Peer is None')
+        logger.info('Peer is None')
     # loop.run_until_complete(pc.close())
     # loop.run_until_complete(signaling.close())
     global http_session
     await http_session.close()
 
-
-if __name__ == "__main__":
+@logger.catch
+def main():
     # args = None
     # parser = argparse.ArgumentParser(description="Data channels ping/pong")
     # parser.add_argument("role", choices=["offer", "answer"])
@@ -402,13 +401,16 @@ if __name__ == "__main__":
     # add_signaling_arguments(parser)
     # args = parser.parse_args()
     # if args.verbose:
+    logger.info('Calling _loadPeerId()')
     _loadPeerId()
+    logger.info('After _loadPeerId()')
     exists = _loadConfig()
+    logger.info('Calling _loadConfig()')
     if not exists:
         _saveConfig()
     _config_logger()
+    logger.info('After _loadConfig()')
     # add formatter to ch
-    log.debug('Log level set to debug')
     # signaling = create_signaling(args)
     # signaling = AmbianicPnpSignaling(args)
     # pc = RTCPeerConnection()
@@ -420,13 +422,17 @@ if __name__ == "__main__":
     # run event loop
     loop = asyncio.get_event_loop()
     try:
-        log.info('\n>>>>> Starting http-proxy over webrtc. <<<<')
+        logger.info('\n>>>>> Starting http-proxy over webrtc. <<<<')
         loop.run_until_complete(_start())
         loop.run_forever()
     except KeyboardInterrupt:
-        log.info('KeyboardInterrupt detected.')
+        logger.info('KeyboardInterrupt detected.')
     finally:
-        log.info('Shutting down...')
+        logger.info('Shutting down...')
         loop.run_until_complete(_shutdown())
         loop.close()
-        log.info('All done.')
+        logger.info('All done.')
+
+
+if __name__ == "__main__":
+    main()
