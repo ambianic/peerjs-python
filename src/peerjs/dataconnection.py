@@ -73,7 +73,7 @@ class DataConnection(BaseConnection):
         self._negotiator: Negotiator = None
         self.stringify = lambda data: json.dumps(data)
         self.parse = lambda jsn: json.loads(jsn)
-        self._buffer: []
+        self._buffer = []
         self._bufferSize = 0
         self._buffering = False
         self._chunkedData = {}
@@ -287,8 +287,8 @@ class DataConnection(BaseConnection):
 
     async def _bufferedSend(self, msg: any) -> None:
         if self._buffering or not await self._trySend(msg):
-            self._buffer.push(msg)
-            self._bufferSize = self._buffer.length
+            self._buffer.append(msg)
+            self._bufferSize = len(self._buffer)
 
     async def _trySend(self, msg) -> bool:
         """Return true if the send succeeds."""
@@ -320,14 +320,14 @@ class DataConnection(BaseConnection):
         """Try to send the first message in the buffer."""
         if not self.open:
             return
-        if self._buffer.length == 0:
+        if len(self._buffer) == 0:
             return
 
         msg = self._buffer[0]
 
         if self._trySend(msg):
-            self._buffer.shift()
-            self._bufferSize = self._buffer.length
+            self._buffer.pop()
+            self._bufferSize = len(self._buffer)
             self._tryBuffer()
 
     # def _sendChunks(self, blob: Blob) -> None:
