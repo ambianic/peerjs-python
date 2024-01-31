@@ -4,7 +4,7 @@
 # from websockets import WebSocket, ConnectionClosed
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List
 import traceback
 
@@ -49,7 +49,7 @@ class PeerOptions:
     path: str = "/"
     key: str = PEER_DEFAULT_KEY
     token: str = None
-    config: Any = util.defaultConfig
+    config: Any = field(default_factory=lambda: util.defaultConfig)
     secure: bool = False
     pingInterval: int = 5  # ping to signaling server in seconds
 
